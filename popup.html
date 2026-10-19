@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Tab Grid</title>
+  <link rel="stylesheet" href="popup.css">
+  <script type="module" src="popup.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Tab Grid</h1>
+    <span class="sub">Tiles tabs you already opened</span>
+  </header>
+
+  <section id="tiled" hidden>
+    <h2>Tiles <span id="tiledSummary" class="muted"></span></h2>
+    <ol id="tileList" class="list"></ol>
+    <div class="row">
+      <button id="retile">Re-tile with layout below</button>
+      <button id="swapBig" title="Swap the tile with audio into the big merged cell">Swap into big cell</button>
+      <button id="untile" class="danger">Un-tile</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Video tabs <span id="tabCount" class="muted"></span></h2>
+    <p id="noTabs" class="muted" hidden>No YouTube, Fox One or Paramount+ tabs are open. Open each game yourself, start it playing, then come back here (or tick “Show all tabs”).</p>
+    <ul id="tabList" class="list"></ul>
+    <div class="row">
+      <button id="tileSelected" class="primary" disabled>Tile selected</button>
+      <button id="tileAll">Tile all</button>
+      <label class="check" style="margin-left:auto"><input type="checkbox" id="showAll"> Show all tabs</label>
+    </div>
+  </section>
+
+  <section>
+    <h2>Layout <span id="layoutSummary" class="muted"></span></h2>
+    <div class="row presets" id="presets"></div>
+    <div class="row custom">
+      <label>Rows <select id="rows"></select></label>
+      <label>Columns <select id="cols"></select></label>
+    </div>
+    <div id="grid" class="grid" aria-label="Layout preview. Drag across cells to merge them; click a merged cell to split it."></div>
+    <p class="hint muted">Drag across cells to merge them (one game can span 2×2). Click a merged cell to split it.</p>
+    <div class="row">
+      <input id="layoutName" placeholder="Name this layout" maxlength="30">
+      <button id="saveLayout">Save</button>
+    </div>
+    <div id="savedLayouts" class="chips"></div>
+  </section>
+
+  <p id="warning" class="warning" hidden></p>
+
+  <section>
+    <h2>Options</h2>
+    <label class="check"><input type="checkbox" id="videoOnlyDefault"> Video-only for new tiles <span class="muted">(hides header, sidebar, comments)</span></label>
+    <label class="check"><input type="checkbox" id="noPageChanges"> No page changes <span class="muted">(only arrange windows, inject nothing)</span></label>
+    <label class="check"><input type="checkbox" id="singleAudio"> Only one tile plays sound <span class="muted">(off: hear several, mute each with 🔊)</span></label>
+    <label class="check"><input type="checkbox" id="audioFollowsFocus"> Sound follows the tile I click</label>
+    <label class="check"><input type="checkbox" id="tuckTitleBars"> Hide title bars <span class="muted">(tucks each window's bar out of its cell; the tile you click covers a thin strip of the one above)</span></label>
+    <label class="check"><input type="checkbox" id="wholeScreen"> Use the whole screen <span class="muted">(covers the taskbar's area)</span></label>
+    <p id="taskbarHint" class="muted small" hidden></p>
+    <label class="field">Monitor <select id="display"></select></label>
+    <p class="muted small">Alt+1 to Alt+4 jump to tiles 1–4. Next/previous, swap and “send back to tab” have no default key: <a href="#" id="shortcuts">set them here</a>.</p>
+  </section>
+
+  <p id="error" class="error" hidden></p>
+</body>
+</html>

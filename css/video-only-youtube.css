@@ -1,0 +1,47 @@
+/* Tab Grid: video-only mode for youtube.com watch pages.
+   Injected with chrome.scripting.insertCSS; removed the same way. Only
+   applies while a watch page is showing, so browsing elsewhere in the
+   tile looks normal. */
+
+html:has(ytd-watch-flexy:not([hidden])),
+html:has(ytd-watch-flexy:not([hidden])) body {
+  overflow: hidden !important;
+  background: #000 !important;
+}
+
+html:has(ytd-watch-flexy:not([hidden])) #masthead-container,
+html:has(ytd-watch-flexy:not([hidden])) tp-yt-app-drawer,
+html:has(ytd-watch-flexy:not([hidden])) ytd-mini-guide-renderer,
+html:has(ytd-watch-flexy:not([hidden])) ytd-watch-flexy #secondary,
+html:has(ytd-watch-flexy:not([hidden])) ytd-watch-flexy #below,
+html:has(ytd-watch-flexy:not([hidden])) ytd-watch-flexy #comments,
+html:has(ytd-watch-flexy:not([hidden])) ytd-watch-flexy #chat-container {
+  display: none !important;
+}
+
+/* The player fills the window. */
+html:has(ytd-watch-flexy:not([hidden])) ytd-watch-flexy #movie_player {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
+  z-index: 2147483000 !important;
+  background: #000 !important;
+}
+
+html:has(ytd-watch-flexy:not([hidden])) ytd-watch-flexy #movie_player video.html5-main-video {
+  left: 0 !important;
+  top: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+}
+
+/* The control bar is sized by the player in pixels; pin it to the edges. */
+html:has(ytd-watch-flexy:not([hidden])) ytd-watch-flexy #movie_player .ytp-chrome-bottom {
+  left: 12px !important;
+  right: 12px !important;
+  width: auto !important;
+}

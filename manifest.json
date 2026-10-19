@@ -1,0 +1,77 @@
+{
+  "manifest_version": 3,
+  "name": "Tab Grid for YouTube",
+  "version": "1.0.0",
+  "description": "Tiles video tabs you already opened (YouTube, Fox One, Paramount+, or any tab) into a grid of windows. Never opens, loads or controls a video itself.",
+  "minimum_chrome_version": "116",
+  "permissions": [
+    "tabs",
+    "storage",
+    "scripting",
+    "system.display"
+  ],
+  "host_permissions": [
+    "https://www.youtube.com/*",
+    "https://m.youtube.com/*",
+    "https://tv.youtube.com/*",
+    "https://*.fox.com/*",
+    "https://*.foxone.com/*",
+    "https://*.paramountplus.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Tab Grid",
+    "default_icon": {
+      "16": "icons/16.png",
+      "32": "icons/32.png"
+    }
+  },
+  "icons": {
+    "16": "icons/16.png",
+    "32": "icons/32.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  },
+  "commands": {
+    "tile-1": {
+      "suggested_key": {
+        "default": "Alt+1"
+      },
+      "description": "Jump to tile 1 (moves audio there)"
+    },
+    "tile-2": {
+      "suggested_key": {
+        "default": "Alt+2"
+      },
+      "description": "Jump to tile 2"
+    },
+    "tile-3": {
+      "suggested_key": {
+        "default": "Alt+3"
+      },
+      "description": "Jump to tile 3"
+    },
+    "tile-4": {
+      "suggested_key": {
+        "default": "Alt+4"
+      },
+      "description": "Jump to tile 4"
+    },
+    "next-tile": {
+      "description": "Jump to the next tile"
+    },
+    "prev-tile": {
+      "description": "Jump to the previous tile"
+    },
+    "swap-big": {
+      "description": "Swap the tile with audio into the big cell"
+    },
+    "send-back": {
+      "description": "Send the current tile back to a normal tab"
+    }
+  }
+}

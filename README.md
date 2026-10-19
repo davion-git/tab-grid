@@ -1,0 +1,198 @@
+# Tab Grid
+
+A Chrome extension for watching several streams at once, such as several
+games on a Sunday. It tiles video tabs **you already opened and started
+playing** into a grid of windows.
+
+It's a window manager, not a player: it never opens, loads, reloads or
+controls a video. Each stream stays an ordinary tab that you started
+yourself, just as if you'd opened several browser windows by hand and
+dragged them into a grid.
+
+What it uses: `chrome.windows` / `chrome.tabs` (to move tabs into popup
+windows and size them), the browser's own tab mute, and an optional
+stylesheet that hides everything on the page except the video.
+
+What it never does: intercept or change network requests, use iframes or
+embeds, change the user agent, send fake clicks or keys, fake focus or
+visibility, poll or call a site's video player, capture video, or load
+pages in the background. It has no content script; the only thing it puts
+into a page is CSS, and "No page changes" turns even that off.
+
+Some multiview tools that do those things have reportedly got accounts
+temporarily blocked as "bot-like". Avoiding all of it is the point of this
+design, but see [Caveats](#caveats-read-these): there's no guarantee.
+
+> Not affiliated with or endorsed by YouTube, Google, Fox, Paramount or any
+> other streaming service. Use it at your own risk and within each
+> service's terms.
+
+## Sites
+
+- **YouTube** (youtube.com watch/live pages): everything, including a
+  video-only look made for YouTube's page.
+- **Fox One** (any fox.com or foxone.com tab), **Paramount+** (any
+  paramountplus.com tab) and **YouTube TV** (tv.youtube.com): listed
+  automatically; tiling, seamless mode and sound work as for YouTube.
+  Video-only is on by default but **experimental** there: it lifts the
+  video out of the page to fill the window, on top of everything, so the
+  player's own controls are covered. It was checked on the services' public
+  pages and on a test page built like a typical player, not on live
+  subscription content.
+- **Any other site:** tick **Show all tabs** under the tab list. Tiling,
+  seamless mode and sound work; video-only isn't available.
+
+## Install (load unpacked)
+
+1. Download this repository (green **Code** button → **Download ZIP**, then
+   unzip it) or `git clone` it.
+2. Open `chrome://extensions` in Chrome.
+3. Turn on **Developer mode** (top right).
+4. Click **Load unpacked** and choose the folder that contains
+   `manifest.json`.
+5. Pin it: puzzle-piece icon in the toolbar → pin **Tab Grid**.
+
+After updating the files, click the circular arrow on Tab Grid's card at
+`chrome://extensions` to reload it.
+
+## Use
+
+1. Open each stream yourself in its own tab and press play.
+2. Click the Tab Grid icon. Your video tabs are listed.
+3. Pick a layout (1×2, 2×2, 3×3, 4×4, or rows × columns). Drag across cells
+   in the preview to merge them, e.g. a 2×2 block of a 3×3 for the main
+   game; click a merged cell to split it. **Save** keeps a named layout.
+4. Click tabs to choose them (the number is the cell they go into), then
+   **Tile selected**, or just **Tile all**.
+5. Click any tile to move the sound there; the others are muted. To hear
+   several at once, untick **Only one tile plays sound**: every tile is
+   unmuted and each tile's 🔊 button mutes or unmutes just that tile.
+   (This is Chrome's own tab mute. The page isn't told, and the video keeps
+   playing normally.)
+
+Popup controls once tiled: per-tile 🔊 (sound here), **Video only** toggle,
+**Show**, **↩ Tab** (send that tile back to a normal tab without reloading;
+the other tiles stay put); **Re-tile** (applies a new layout to the same
+tabs, moving the existing windows), **Swap into big cell** (puts the tile
+with sound into the merged cell), **Un-tile** (all tabs back into one normal
+window).
+
+Keyboard: **Alt+1 … Alt+4** jump to tiles 1–4 (the sound follows). Next
+tile, previous tile, swap-into-big-cell and **send back to tab** (acts on
+the tile you're in) have no default keys because Chrome allows only four;
+set them at `chrome://extensions/shortcuts` (the popup links there).
+Shortcuts work while a Chrome window is focused.
+
+Options: **Video-only for new tiles**, **No page changes** (only arranges
+windows; injects nothing anywhere), **Only one tile plays sound**, **Sound
+follows the tile I click**, **Hide title bars**, **Use the whole screen**,
+and which **monitor** to tile on.
+
+### Seamless full-screen grid
+
+- **No gaps** (always on): Windows gives every window an invisible ~8 px
+  border on the left, right and bottom, which shows as gaps between tiles.
+  Tiles overlap those borders, so they meet edge to edge.
+- **Hide title bars**: each window is made taller by its title bar and
+  moved up, so the bar sits outside its cell. Top-row bars go off the top
+  of the screen; lower rows' bars sit *behind* the tile above (Tab Grid
+  stacks the windows top row in front). Windows always brings a clicked
+  window to the front, so when you click a tile below the top row its bar
+  shows over the tile above for about a second; then Tab Grid restacks the
+  windows and it's hidden again. The sound stays on the tile you clicked.
+  Side effect: after the restack a top-row tile has the window focus, so
+  clicking *that* tile won't move the sound until you've clicked a
+  different tile first (Alt+1–4 and the popup's 🔊 always work). To move or
+  close a tile, use the popup (Un-tile) or Alt+F4.
+- **Use the whole screen**: tiles cover the full monitor, including the
+  taskbar's area. Windows keeps an always-shown taskbar on top of them, so
+  also turn on *Settings → Personalization → Taskbar → Taskbar behaviors →
+  Automatically hide the taskbar* (the popup reminds you while it's off).
+
+Changing either option while tiled re-tiles immediately; tabs don't reload.
+Windows 11 still draws a 1 px outline around each window, which shows as a
+hairline between tiles. That can't be removed from Chrome. Only Windows has
+been tested; on macOS and Linux the frame sizes are measured the same way,
+but the results haven't been checked.
+
+Above 9 tiles the popup warns you: each tile decodes its own stream, and
+accounts can have a limit on simultaneous streams.
+
+## First-use test plan (do it in stages)
+
+Stop at the first stage that misbehaves.
+
+1. **No account risk first.** In a Chrome profile that is *not* signed in
+   to your streaming account (or a guest window), open 2 ordinary public
+   YouTube videos, turn on **No page changes**, tile 1×2. Check the videos
+   keep playing and nothing reloads. Un-tile.
+2. Same profile: turn **No page changes** off, tile 2×2 with 4 public
+   videos. Check video-only looks right, click tiles to move the sound, try
+   Alt+1…4, toggle Video only on one tile.
+3. Try a 3×3 with a merged 2×2 cell and **Swap into big cell**.
+4. **Your account, small:** signed in, one stream plus one ordinary video,
+   **No page changes on**, 1×2, for a while.
+5. If that's clean, try your usual number of streams, still with **No page
+   changes on** for the first full session.
+6. Only after a clean session, try video-only mode on your account.
+
+## Caveats (read these)
+
+- **No guarantee.** This only automates what you could do by hand with
+  several windows, and it avoids the techniques that make multiview tools
+  look like bots. But each service decides what it flags, and nobody outside
+  it can promise it will never flag something.
+- **If you see "temporarily unavailable, try again later"** (or similar
+  errors on videos that should play): stop at once, Un-tile, remove the
+  extension at `chrome://extensions`, and go back to ordinary windows.
+- During testing, with **9** public 4K/60 YouTube videos playing at once in
+  a signed-out test browser, YouTube showed "Something went wrong. Refresh
+  or try again later" on two tiles after a couple of minutes, with no
+  reload. With **6** videos it did not happen. Keep the count down.
+- **YouTube TV, Fox One and Paramount+** video-only CSS is generic (they
+  need a subscription to test against). If a tile looks wrong, switch
+  **Video only** off for that tile.
+- Streaming services may limit how many streams one account plays at once;
+  that's their rule and nothing here changes it.
+- Sites change their pages; if video-only mode starts looking wrong, turn
+  it off (or use **No page changes**). Tiling and sound still work.
+- **Closing a tile window closes that tab**, as with any window. Chrome
+  gives extensions no way to stop a close, and reopening the stream would
+  mean the extension loading a page itself, which it never does. To get a
+  stream back as a tab, use **↩ Tab** or the send-back shortcut instead
+  of ✕.
+- Moving windows with the mouse is fine. Dragging a tile's tab into another
+  window takes it out of the grid.
+- Un-tile leaves mute as it is, so only the tile that had sound keeps
+  playing sound. Unmute others from the tab's right-click menu.
+- The grid is forgotten when Chrome restarts (the windows are gone anyway).
+
+## Development
+
+The extension has no build step and no dependencies: the files in this
+folder are what Chrome loads. The tests use [Playwright](https://playwright.dev):
+
+```bash
+cd tests
+npm install
+npx playwright install chromium
+npm test
+```
+
+Each test loads the extension into a throwaway, signed-out Chromium profile
+and plays ordinary public YouTube videos. They must run headed (test
+windows appear on screen) because `chrome.system.display` crashes headless
+Chromium.
+
+- `e2e.mjs` (6 videos): 2×2, 3×3, a custom 2×3, a merged cell, swap,
+  video-only on/off, no-page-changes, sound switching, reload handling and
+  un-tile, including that no tab reloads when it's moved.
+- `seamless.mjs` (4 videos): with the seamless options, every page must
+  fill its cell exactly; clicking a lower tile restacks; the plain layout
+  must come back without reloads.
+- `send-back.mjs`, `audio.mjs`, `other-sites.mjs`: those features.
+- `make-icons.mjs` redraws the icons.
+
+## License
+
+[MIT](LICENSE)

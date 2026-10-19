@@ -1,0 +1,45 @@
+/* Tab Grid: video-only mode for Fox One (fox.com / foxone.com),
+   Paramount+ (paramountplus.com) and tv.youtube.com. These sites' pages are unknown to us (they need a
+   subscription), so this doesn't target their layout; it lifts the <video>
+   element itself out of the page to fill the window. The player's own
+   controls end up underneath; turn video-only off for that tile when you
+   need them. */
+
+html, body {
+  overflow: hidden !important;
+  background: #000 !important;
+}
+
+/* Every element that contains the video. A transform, filter, contain or
+   similar on any of these traps a fixed-position child inside that box
+   (the video then only fills its old box), and a low z-index keeps it under
+   headers and overlays elsewhere on the page. Undo both. */
+body *:has(video) {
+  transform: none !important;
+  translate: none !important;
+  scale: none !important;
+  rotate: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  perspective: none !important;
+  contain: none !important;
+  container-type: normal !important;
+  will-change: auto !important;
+  clip-path: none !important;
+  mask: none !important;
+  z-index: 2147483000 !important;
+}
+
+video {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  transform: none !important;
+  object-fit: contain !important;
+  background: #000 !important;
+  z-index: 2147483000 !important;
+}

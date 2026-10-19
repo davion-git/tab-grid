@@ -1,0 +1,13 @@
+{
+  "name": "tab-grid-tests",
+  "private": true,
+  "type": "module",
+  "description": "End-to-end tests for the Tab Grid extension (Playwright, headed).",
+  "scripts": {
+    "test": "node e2e.mjs && node seamless.mjs && node send-back.mjs && node audio.mjs && node other-sites.mjs",
+    "icons": "node make-icons.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.58.2"
+  }
+}
