@@ -106,10 +106,22 @@ set them at `chrome://extensions/shortcuts` (the popup links there).
 Shortcuts work while a Chrome window is focused.
 
 In video-only mode a transparent layer over each page takes mouse clicks,
-so clicking a tile to switch games or sound never pauses its video (the
-keyboard still reaches the player). The flip side: you can't click inside
-the player, e.g. "Skip ad"; switch **Video only** off for that tile when
-you need to.
+so clicking a tile to switch games or sound never pauses its video. On
+YouTube the layer stops short of the bottom edge: **hover at the bottom of
+a tile for the player's control bar** (play/pause, volume), and clicks
+there work. On Fox One / Paramount+ / YouTube TV the player's own controls
+are covered; switch **Video only** off for that tile to reach them.
+
+Without clicking into a page at all:
+- **Chrome's media controls**: while anything plays, a normal Chrome
+  window's toolbar has a play-icon button listing every tab with media,
+  including the tiles, each with its own play/pause.
+- Your keyboard's **play/pause and volume keys**, and the Windows volume
+  pop-up. Only one tile plays sound by default, so the system volume is
+  that game's volume.
+
+Tab Grid itself has no play or volume buttons on purpose: those would mean
+the extension operating the site's player.
 
 Options: **Video-only for new tiles**, **No page changes** (only arranges
 windows; injects nothing anywhere), **Only one tile plays sound**, **Sound

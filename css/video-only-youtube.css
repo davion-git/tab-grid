@@ -47,11 +47,12 @@ html:has(ytd-watch-flexy:not([hidden])) ytd-watch-flexy #movie_player .ytp-chrom
 }
 
 /* Clicking a tile (to switch games or move the sound) would also reach the
-   player and pause it. A transparent layer over the page takes the clicks
-   instead; the keyboard still reaches the player. */
+   player and pause it. A transparent layer over the page takes those clicks
+   instead. It stops short of the bottom edge, where the player's control bar
+   is: hover there for play/pause and volume, and clicks there work. */
 html:has(ytd-watch-flexy:not([hidden]))::after {
   content: "";
   position: fixed;
-  inset: 0;
+  inset: 0 0 64px 0;
   z-index: 2147483647;
 }
