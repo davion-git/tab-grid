@@ -45,3 +45,13 @@ html:has(ytd-watch-flexy:not([hidden])) ytd-watch-flexy #movie_player .ytp-chrom
   right: 12px !important;
   width: auto !important;
 }
+
+/* Clicking a tile (to switch games or move the sound) would also reach the
+   player and pause it. A transparent layer over the page takes the clicks
+   instead; the keyboard still reaches the player. */
+html:has(ytd-watch-flexy:not([hidden]))::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+}

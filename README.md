@@ -77,12 +77,18 @@ After updating the files, click the circular arrow on Tab Grid's card at
   (they swap places, and the sound goes with the main game). Any layout
   with a merged ★ cell works the same way, e.g. one you drew yourself.
 - **Corner (2)**: one game fills the screen and the other sits on top of it
-  in the top-right corner. **Click the big game to swap them.** (Windows
-  always puts the active window in front, so the corner game has to stay
-  the active one to stay visible; that's why it's the big game you click,
-  and why clicking the corner game itself does nothing.) The **Swap into
-  big cell** button and shortcut also swap them, and Alt+2 swaps in the
-  corner game.
+  in the top-right corner. **Click the corner game to swap them**; clicking
+  the big game doesn't swap. The sound goes with the big game.
+  How: Windows always puts the active window in front, so neither game can
+  be the active window (the corner one would hide the big one's clicks, the
+  big one would cover the corner). Tab Grid keeps a small black **helper
+  window** of its own active instead: on your other monitor if you have one,
+  otherwise half off the bottom-left edge of the screen. It's a blank page,
+  not a website, and closes on Un-tile. If you click the big game it comes
+  forward for a moment, then the corner game is put back on top.
+  With **Hide title bars** on, the big game uses Chrome's real full-screen
+  mode (no title bar, no gap at the bottom); Chrome shows "To exit full
+  screen, press and hold Esc" for a few seconds after each swap.
 - Turn off **Click a small game to make it the main one** to stop the
   swaps on click (the swap button and shortcut still work).
 
@@ -98,6 +104,12 @@ tile, previous tile, swap-into-big-cell and **send back to tab** (acts on
 the tile you're in) have no default keys because Chrome allows only four;
 set them at `chrome://extensions/shortcuts` (the popup links there).
 Shortcuts work while a Chrome window is focused.
+
+In video-only mode a transparent layer over each page takes mouse clicks,
+so clicking a tile to switch games or sound never pauses its video (the
+keyboard still reaches the player). The flip side: you can't click inside
+the player, e.g. "Skip ad"; switch **Video only** off for that tile when
+you need to.
 
 Options: **Video-only for new tiles**, **No page changes** (only arranges
 windows; injects nothing anywhere), **Only one tile plays sound**, **Sound
@@ -127,7 +139,7 @@ and which **monitor** to tile on.
 
 Changing either option while tiled re-tiles immediately; tabs don't reload.
 With **Hide title bars** on, a window can't be taller than the screen plus
-its frame, so a full-height tile (Corner's big game, 1×2) ends about 19 px
+its frame, so a full-height tile (1×2, or Corner's big game without full screen) ends about 19 px
 short of the bottom edge. Windows 11 also draws a 1 px outline around each window, which shows as a
 hairline between tiles. That can't be removed from Chrome. Only Windows has
 been tested; on macOS and Linux the frame sizes are measured the same way,
@@ -208,7 +220,9 @@ Chromium.
 - `seamless.mjs` (4 videos): with the seamless options, every page must
   fill its cell exactly; clicking a lower tile restacks; the plain layout
   must come back without reloads.
-- `main-swap.mjs` (4 videos): Main + 3 and Corner, clicking to swap.
+- `main-swap.mjs` (4 videos): Main + 3, clicking a strip game to swap.
+- `corner.mjs` (2 videos): Corner with the helper window, full screen,
+  swapping only on a corner click, and clicks never pausing a video.
 - `send-back.mjs`, `audio.mjs`, `other-sites.mjs`: those features.
 - `make-icons.mjs` redraws the icons.
 

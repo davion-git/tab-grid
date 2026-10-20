@@ -241,6 +241,7 @@ async function tile(tabIds, layoutIn, displayId) {
   }
 
   if (leaving.length) await putBack(leaving, null);
+  if (!layout.pip) await closeHolder();
 
   const state = {
     tiles,
@@ -260,7 +261,9 @@ async function tile(tabIds, layoutIn, displayId) {
   for (const t of tiles) await applyCss(t, settings);
 
   if (layout.pip) {
-    await stackRows(state); // the corner window last, so it's in front
+    const main = tiles.find((t) => cells[t.cell].main);
+    if (main) await tryGet(placeCornerTile(main, state, area));
+    await cornerRestack(state);
   } else if (state.tuck) await stackRows(state, state.audioTabId);
   else {
     const audioTile = tiles.find((t) => t.tabId === state.audioTabId);
@@ -299,6 +302,7 @@ async function putBack(tiles, activeTabId) {
 }
 
 async function untile() {
+  await closeHolder();
   const state = await getState();
   await setState({ ...EMPTY_STATE });
   // Mute states are left as they are: only the audio tile keeps playing sound.
@@ -366,12 +370,78 @@ async function swapIntoBig(tabId) {
   return getState();
 }
 
-// Corner layout: the corner window has to be the active one to stay on top
-// (Windows always puts the active window in front), so the click we can
-// see is a click on the big game. That click brings the big window forward;
-// it shrinks into the corner, still in front, and the other one grows to
-// fill the screen behind it. The sound goes with the big game.
-async function cornerSwap(clickedTabId = null) {
+// ------------------------------------------------------------- Corner layout
+// Windows always puts the active window in front. For the corner game to
+// stay on top of the big one while a click on it can still be seen, neither
+// game may be the active window. So a small "holder" window of this
+// extension's own (holder.html, a blank black page, no website) is kept
+// active, on another monitor if there is one. Chrome won't place a window
+// less than half on a screen, so with one monitor it sits half off the
+// bottom-left edge.
+
+async function holderId() {
+  const { holderWindowId } = await chrome.storage.session.get("holderWindowId");
+  return holderWindowId ?? null;
+}
+
+async function ensureHolder(state) {
+  const id = await holderId();
+  if (id != null && (await tryGet(chrome.windows.get(id)))) return id;
+  const displays = await chrome.system.display.getInfo();
+  const other = displays.find((d) => d.id !== state.displayId);
+  const width = 240, height = 100;
+  let left, top;
+  if (other) {
+    const a = other.workArea;
+    left = a.left + a.width - width - 16;
+    top = a.top + a.height - height - 16;
+  } else {
+    const a = state.area;
+    left = a.left - width / 2 + 8;
+    top = a.top + a.height - height;
+  }
+  const w = await chrome.windows.create({
+    url: chrome.runtime.getURL("holder.html"), type: "popup", left, top, width, height, focused: false,
+  });
+  await chrome.storage.session.set({ holderWindowId: w.id });
+  return w.id;
+}
+
+async function closeHolder() {
+  const id = await holderId();
+  await chrome.storage.session.remove("holderWindowId");
+  if (id != null) await tryGet(chrome.windows.remove(id));
+}
+
+// Big game at the back, the corner game on top of it, the holder active.
+async function cornerRestack(state) {
+  const cells = buildCells(state.layout);
+  const inset = state.tiles.find((t) => cells[t.cell]?.inset);
+  const holder = await ensureHolder(state);
+  ignoreFocusUntil = Date.now() + 2000;
+  if (inset) await tryGet(chrome.windows.update(inset.windowId, { focused: true }));
+  await tryGet(chrome.windows.update(holder, { focused: true }));
+  ignoreFocusUntil = Date.now() + 500;
+}
+
+// With "Hide title bars" the big game goes full screen: no title bar, and no
+// limit on height (a normal window can't be taller than the screen plus its
+// frame, which left a strip at the bottom).
+async function placeCornerTile(t, state, area) {
+  const cell = buildCells(state.layout)[t.cell];
+  if (cell.main && state.tuck) {
+    const win = await tryGet(chrome.windows.get(t.windowId));
+    if (win?.state !== "fullscreen") {
+      await placeWindow(t.windowId, cellRect(cell, state.layout, area)); // onto the right monitor first
+      await chrome.windows.update(t.windowId, { state: "fullscreen" });
+    }
+    return;
+  }
+  await placeWindow(t.windowId, windowRect(cellRect(cell, state.layout, area), state.frame, state.tuck));
+}
+
+// Swaps the two games; the sound goes with the big one.
+async function cornerSwap() {
   const state = await getState();
   const cells = buildCells(state.layout);
   const main = state.tiles.find((t) => cells[t.cell]?.main);
@@ -379,20 +449,13 @@ async function cornerSwap(clickedTabId = null) {
   if (!main || !inset) return state;
   const area = state.area || (await pickDisplay(state.displayId)).workArea;
   [main.cell, inset.cell] = [inset.cell, main.cell];
-  const settings = await getSettings();
-  if (settings.singleAudio) state.audioTabId = inset.tabId;
+  if ((await getSettings()).singleAudio) state.audioTabId = inset.tabId;
   await setState(state);
-  const place = (t) => placeWindow(t.windowId, windowRect(cellRect(cells[t.cell], state.layout, area), state.frame, state.tuck));
-  // The window going into the corner must end up in front. If the big one
-  // was clicked it already is; otherwise (shortcut, popup) raise it.
-  await tryGet(place(main));
-  await tryGet(place(inset));
-  if (clickedTabId !== main.tabId) {
-    ignoreFocusUntil = Date.now() + 1500;
-    await tryGet(chrome.windows.update(main.windowId, { focused: true }));
-    ignoreFocusUntil = Date.now() + 500;
-  }
+  ignoreFocusUntil = Date.now() + 3000;
+  await tryGet(placeCornerTile(main, state, area)); // old big game into the corner
+  await tryGet(placeCornerTile(inset, state, area)); // old corner game fills the screen
   await applyAudio(state);
+  await cornerRestack(state);
   return getState();
 }
 
@@ -434,8 +497,10 @@ chrome.windows.onFocusChanged.addListener((windowId) => {
     if (!t) return;
     const cells = buildCells(state.layout);
     if (state.layout.pip) {
-      // Clicking the big game swaps it with the corner one.
-      if (cells[t.cell].main && state.tiles.length > 1) await cornerSwap(t.tabId);
+      // Clicking the corner game swaps it in. Clicking the big game brought
+      // it in front of the corner one, so put the corner one back on top.
+      if (cells[t.cell].inset && settings.clickToMain && state.tiles.length > 1) await cornerSwap();
+      else await cornerRestack(state);
       return;
     }
     const big = bigCellIndex(cells);

@@ -1,6 +1,5 @@
-// Main + strip and Corner layouts, with 4 public videos: clicking a strip
-// game makes it the main one; in Corner, clicking the big game swaps it
-// into the corner. Nothing may reload.
+// Main + 3 layout with 4 public videos: clicking a strip game makes it the
+// main one and gives it the sound. Nothing may reload. (Corner: corner.mjs.)
 //   node main-swap.mjs [capture.png]   (always headed; Windows screen capture if a path is given)
 import { chromium } from "playwright";
 import { fileURLToPath } from "url";
@@ -55,29 +54,6 @@ await ctl.waitForTimeout(2500);
 s2 = await info();
 check(big(s2[3]) && s2.filter(big).length === 1, "click game 4: it becomes main");
 await noReload("Main + 3");
-
-// ---- Corner with games 1 and 2
-r = await call("tile", { tabIds: ids.slice(0, 2), layout: { rows: 1, cols: 1, pip: { corner: "tr", size: 0.3 } } });
-check(r.ok, "Corner tiled", r.error);
-await ctl.waitForTimeout(2000);
-s = await info();
-console.log(s.slice(0, 2).map((x) => `${x.left},${x.top} ${x.w}x${x.h}${x.sound ? " sound" : ""}${x.focused ? " focused" : ""}`).join(" | "));
-check(big(s[0]) && !big(s[1]) && s[1].w === 576 && s[1].h === 324, "game 1 fills the screen, game 2 in the corner (576x324)");
-check(s[1].focused, "corner window is the active one (so it stays in front)");
-check(s[0].sound && !s[1].sound, "big game has the sound");
-shoot(capture?.replace(/\.png$/, "-corner.png"));
-await ctl.evaluate((w) => chrome.windows.update(w, { focused: true }), s[0].win); // click the big game
-await ctl.waitForTimeout(1500);
-s2 = await info();
-check(big(s2[1]) && !big(s2[0]) && s2[0].w === 576, "click the big game: the two swap");
-check(s2[0].focused, "the game now in the corner is the active one");
-check(s2[1].sound && !s2[0].sound, "sound went to the new big game");
-shoot(capture?.replace(/\.png$/, "-corner-swapped.png"));
-r = await call("swapBig", {});
-await ctl.waitForTimeout(1500);
-s2 = await info();
-check(big(s2[0]) && s2[1].focused, "swap button: back again, corner window in front");
-await noReload("Corner");
 
 await call("untile");
 await call("setSettings", { patch: { wholeScreen: false, tuckTitleBars: false } });
