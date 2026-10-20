@@ -101,6 +101,11 @@ input:not([type="checkbox"]) { flex: 1; min-width: 0; }
   font-size: 12px; color: var(--muted);
 }
 .grid .cell.merged { background: var(--cell-big); color: var(--fg); cursor: pointer; }
+.grid.pip { cursor: default; }
+.grid .cell.inset {
+  position: absolute; top: 0; aspect-ratio: 16 / 9; height: auto;
+  outline: 2px solid var(--bg); z-index: 1;
+}
 .grid .drag { background: var(--sel); border-radius: 4px; pointer-events: none; z-index: 1; }
 .hint { margin: 4px 0 0; font-size: 12px; }
 

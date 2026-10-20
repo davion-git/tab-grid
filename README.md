@@ -70,6 +70,22 @@ After updating the files, click the circular arrow on Tab Grid's card at
    (This is Chrome's own tab mute. The page isn't told, and the video keeps
    playing normally.)
 
+### One main game
+
+- **Main + 2 / Main + 3 / Main + 4**: one big game on top, the others in a
+  strip underneath. **Click a game in the strip to make it the main one**
+  (they swap places, and the sound goes with the main game). Any layout
+  with a merged ★ cell works the same way, e.g. one you drew yourself.
+- **Corner (2)**: one game fills the screen and the other sits on top of it
+  in the top-right corner. **Click the big game to swap them.** (Windows
+  always puts the active window in front, so the corner game has to stay
+  the active one to stay visible; that's why it's the big game you click,
+  and why clicking the corner game itself does nothing.) The **Swap into
+  big cell** button and shortcut also swap them, and Alt+2 swaps in the
+  corner game.
+- Turn off **Click a small game to make it the main one** to stop the
+  swaps on click (the swap button and shortcut still work).
+
 Popup controls once tiled: per-tile 🔊 (sound here), **Video only** toggle,
 **Show**, **↩ Tab** (send that tile back to a normal tab without reloading;
 the other tiles stay put); **Re-tile** (applies a new layout to the same
@@ -110,7 +126,9 @@ and which **monitor** to tile on.
   Automatically hide the taskbar* (the popup reminds you while it's off).
 
 Changing either option while tiled re-tiles immediately; tabs don't reload.
-Windows 11 still draws a 1 px outline around each window, which shows as a
+With **Hide title bars** on, a window can't be taller than the screen plus
+its frame, so a full-height tile (Corner's big game, 1×2) ends about 19 px
+short of the bottom edge. Windows 11 also draws a 1 px outline around each window, which shows as a
 hairline between tiles. That can't be removed from Chrome. Only Windows has
 been tested; on macOS and Linux the frame sizes are measured the same way,
 but the results haven't been checked.
@@ -190,6 +208,7 @@ Chromium.
 - `seamless.mjs` (4 videos): with the seamless options, every page must
   fill its cell exactly; clicking a lower tile restacks; the plain layout
   must come back without reloads.
+- `main-swap.mjs` (4 videos): Main + 3 and Corner, clicking to swap.
 - `send-back.mjs`, `audio.mjs`, `other-sites.mjs`: those features.
 - `make-icons.mjs` redraws the icons.
 

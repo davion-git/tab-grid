@@ -21,6 +21,7 @@ const DEFAULT_SETTINGS = {
   noPageChanges: false, // master switch: tile windows only, inject nothing
   singleAudio: true, // only one tile unmuted at a time (off = mute each tile yourself)
   audioFollowsFocus: true,
+  clickToMain: true, // in a layout with a main cell, clicking a small tile swaps it in
   wholeScreen: false, // tile over display.bounds instead of workArea (for an auto-hidden taskbar)
   tuckTitleBars: false, // push each window's title bar out of its cell
   layout: { rows: 2, cols: 2, merges: [] },
@@ -120,7 +121,9 @@ let ignoreFocusUntil = 0;
 async function stackRows(state, lastTabId = null) {
   const cells = buildCells(state.layout);
   const order = [...state.tiles].sort((a, b) =>
-    cells[b.cell].r - cells[a.cell].r || (a.tabId === lastTabId) - (b.tabId === lastTabId)
+    !!cells[a.cell].inset - !!cells[b.cell].inset ||
+    cells[b.cell].r - cells[a.cell].r ||
+    (a.tabId === lastTabId) - (b.tabId === lastTabId)
   );
   ignoreFocusUntil = Date.now() + 2000;
   for (const t of order) await tryGet(chrome.windows.update(t.windowId, { focused: true }));
@@ -248,12 +251,17 @@ async function tile(tabIds, layoutIn, displayId) {
     tuck: settings.tuckTitleBars,
     audioTabId: tiles.some((t) => t.tabId === prev.audioTabId) ? prev.audioTabId : tiles[0]?.tabId ?? null,
   };
+  // With a main cell, the game in it starts with the sound.
+  const mainTile = tiles.find((t) => t.cell === bigCellIndex(cells));
+  if (mainTile && settings.singleAudio) state.audioTabId = mainTile.tabId;
   await setState(state);
   await setSettings({ layout, displayId: display.id });
   await applyAudio(state);
   for (const t of tiles) await applyCss(t, settings);
 
-  if (state.tuck) await stackRows(state, state.audioTabId);
+  if (layout.pip) {
+    await stackRows(state); // the corner window last, so it's in front
+  } else if (state.tuck) await stackRows(state, state.audioTabId);
   else {
     const audioTile = tiles.find((t) => t.tabId === state.audioTabId);
     if (audioTile) await tryGet(chrome.windows.update(audioTile.windowId, { focused: true }));
@@ -324,6 +332,13 @@ async function setVideoOnly(tabId, on) {
 
 async function focusTile(tile) {
   if (!tile) return;
+  const state = await getState();
+  if (state.layout?.pip) {
+    // Bringing either window forward would cover the corner one; Alt+N
+    // on the corner game swaps it in instead.
+    if (buildCells(state.layout)[tile.cell].inset) await cornerSwap();
+    return;
+  }
   await tryGet(chrome.windows.update(tile.windowId, { focused: true }));
   await setAudio(tile.tabId);
 }
@@ -333,6 +348,7 @@ async function focusTile(tile) {
 async function swapIntoBig(tabId) {
   const state = await getState();
   if (!state.layout) return state;
+  if (state.layout.pip) return cornerSwap();
   const cells = buildCells(state.layout);
   const big = bigCellIndex(cells);
   if (big < 0) return state;
@@ -347,6 +363,36 @@ async function swapIntoBig(tabId) {
     if (t) await tryGet(placeWindow(t.windowId, windowRect(cellRect(cells[t.cell], state.layout, area), state.frame, state.tuck)));
   }
   await focusTile(src);
+  return getState();
+}
+
+// Corner layout: the corner window has to be the active one to stay on top
+// (Windows always puts the active window in front), so the click we can
+// see is a click on the big game. That click brings the big window forward;
+// it shrinks into the corner, still in front, and the other one grows to
+// fill the screen behind it. The sound goes with the big game.
+async function cornerSwap(clickedTabId = null) {
+  const state = await getState();
+  const cells = buildCells(state.layout);
+  const main = state.tiles.find((t) => cells[t.cell]?.main);
+  const inset = state.tiles.find((t) => cells[t.cell]?.inset);
+  if (!main || !inset) return state;
+  const area = state.area || (await pickDisplay(state.displayId)).workArea;
+  [main.cell, inset.cell] = [inset.cell, main.cell];
+  const settings = await getSettings();
+  if (settings.singleAudio) state.audioTabId = inset.tabId;
+  await setState(state);
+  const place = (t) => placeWindow(t.windowId, windowRect(cellRect(cells[t.cell], state.layout, area), state.frame, state.tuck));
+  // The window going into the corner must end up in front. If the big one
+  // was clicked it already is; otherwise (shortcut, popup) raise it.
+  await tryGet(place(main));
+  await tryGet(place(inset));
+  if (clickedTabId !== main.tabId) {
+    ignoreFocusUntil = Date.now() + 1500;
+    await tryGet(chrome.windows.update(main.windowId, { focused: true }));
+    ignoreFocusUntil = Date.now() + 500;
+  }
+  await applyAudio(state);
   return getState();
 }
 
@@ -386,7 +432,19 @@ chrome.windows.onFocusChanged.addListener((windowId) => {
     const state = await getState();
     const t = state.tiles.find((x) => x.windowId === windowId);
     if (!t) return;
-    if (state.tuck && buildCells(state.layout)[t.cell].r > 0) scheduleRestack(t.tabId);
+    const cells = buildCells(state.layout);
+    if (state.layout.pip) {
+      // Clicking the big game swaps it with the corner one.
+      if (cells[t.cell].main && state.tiles.length > 1) await cornerSwap(t.tabId);
+      return;
+    }
+    const big = bigCellIndex(cells);
+    if (settings.clickToMain && big >= 0 && t.cell !== big) {
+      await swapIntoBig(t.tabId); // also gives it the sound
+      if (state.tuck) scheduleRestack(t.tabId);
+      return;
+    }
+    if (state.tuck && cells[t.cell].r > 0) scheduleRestack(t.tabId);
     if (settings.singleAudio && settings.audioFollowsFocus && t.tabId !== state.audioTabId) await setAudio(t.tabId);
   });
 });

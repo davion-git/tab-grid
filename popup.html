@@ -41,7 +41,7 @@
       <label>Columns <select id="cols"></select></label>
     </div>
     <div id="grid" class="grid" aria-label="Layout preview. Drag across cells to merge them; click a merged cell to split it."></div>
-    <p class="hint muted">Drag across cells to merge them (one game can span 2×2). Click a merged cell to split it.</p>
+    <p class="hint muted">Drag across cells to merge them (one game can span 2×2). Click a merged cell to split it. ★ is the main cell.</p>
     <div class="row">
       <input id="layoutName" placeholder="Name this layout" maxlength="30">
       <button id="saveLayout">Save</button>
@@ -57,6 +57,7 @@
     <label class="check"><input type="checkbox" id="noPageChanges"> No page changes <span class="muted">(only arrange windows, inject nothing)</span></label>
     <label class="check"><input type="checkbox" id="singleAudio"> Only one tile plays sound <span class="muted">(off: hear several, mute each with 🔊)</span></label>
     <label class="check"><input type="checkbox" id="audioFollowsFocus"> Sound follows the tile I click</label>
+    <label class="check"><input type="checkbox" id="clickToMain"> Click a small game to make it the main one <span class="muted">(layouts with a ★ cell; in Corner, click the big game to swap)</span></label>
     <label class="check"><input type="checkbox" id="tuckTitleBars"> Hide title bars <span class="muted">(tucks each window's bar out of its cell; the tile you click covers a thin strip of the one above)</span></label>
     <label class="check"><input type="checkbox" id="wholeScreen"> Use the whole screen <span class="muted">(covers the taskbar's area)</span></label>
     <p id="taskbarHint" class="muted small" hidden></p>

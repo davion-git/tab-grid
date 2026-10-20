@@ -1,4 +1,4 @@
-import { PRESETS, MAX, VIDEO_URLS, cleanLayout, buildCells, bigCellIndex, describeLayout, siteKind } from "./layout.js";
+import { PRESETS, MAX, VIDEO_URLS, cleanLayout, buildCells, bigCellIndex, describeLayout, siteKind, sameLayout } from "./layout.js";
 
 // The video tabs, or with "Show all tabs" every ordinary web tab.
 async function queryTabs() {
@@ -29,7 +29,7 @@ async function send(type, extra = {}) {
 
 async function load() {
   settings = (await chrome.storage.local.get("settings")).settings || {};
-  settings = { videoOnlyDefault: true, noPageChanges: false, singleAudio: true, audioFollowsFocus: true, wholeScreen: false, tuckTitleBars: false, savedLayouts: {}, ...settings };
+  settings = { videoOnlyDefault: true, noPageChanges: false, singleAudio: true, audioFollowsFocus: true, clickToMain: true, wholeScreen: false, tuckTitleBars: false, savedLayouts: {}, ...settings };
   state = (await chrome.storage.session.get("tiling")).tiling || { tiles: [] };
   layout = cleanLayout(state.tiles.length && state.layout ? state.layout : settings.layout || layout);
   $("showAll").checked = !!settings.showAll;
@@ -39,6 +39,7 @@ async function load() {
   $("noPageChanges").checked = settings.noPageChanges;
   $("singleAudio").checked = settings.singleAudio;
   $("audioFollowsFocus").checked = settings.audioFollowsFocus;
+  $("clickToMain").checked = settings.clickToMain;
   $("audioFollowsFocus").disabled = !settings.singleAudio;
   $("wholeScreen").checked = settings.wholeScreen;
   $("tuckTitleBars").checked = settings.tuckTitleBars;
@@ -61,9 +62,9 @@ async function load() {
   $("presets").replaceChildren(
     ...PRESETS.map((p) => {
       const b = document.createElement("button");
-      b.textContent = p.id.replace("x", "×");
+      b.textContent = p.label;
       b.dataset.id = p.id;
-      b.onclick = () => setLayout({ rows: p.rows, cols: p.cols, merges: [] });
+      b.onclick = () => setLayout(p);
       return b;
     })
   );
@@ -210,9 +211,10 @@ function renderLayout() {
   $("cols").value = layout.cols;
   for (const b of $("presets").children) {
     const p = PRESETS.find((x) => x.id === b.dataset.id);
-    b.classList.toggle("on", p.rows === layout.rows && p.cols === layout.cols && !layout.merges.length);
+    b.classList.toggle("on", sameLayout(p, layout));
   }
   const cells = buildCells(layout);
+  $("grid").classList.toggle("pip", !!layout.pip);
   $("layoutSummary").textContent = `${cells.length} cell${cells.length === 1 ? "" : "s"}`;
   const g = $("grid");
   g.style.gridTemplateRows = `repeat(${layout.rows}, 1fr)`;
@@ -221,8 +223,12 @@ function renderLayout() {
   g.replaceChildren(
     ...cells.map((c, i) => {
       const d = document.createElement("div");
-      d.className = "cell" + (c.rs * c.cs > 1 ? " merged" : "");
+      d.className = "cell" + (c.rs * c.cs > 1 || c.main ? " merged" : "") + (c.inset ? " inset" : "");
       d.style.gridArea = `${c.r + 1} / ${c.c + 1} / span ${c.rs} / span ${c.cs}`;
+      if (c.inset) {
+        d.style.width = `${layout.pip.size * 100}%`;
+        d.style[layout.pip.corner === "tl" ? "left" : "right"] = "0";
+      }
       d.textContent = (i === big ? "★ " : "") + (i + 1);
       return d;
     })
@@ -244,6 +250,7 @@ function renderLayout() {
     rs: Math.abs(a.r - b.r) + 1, cs: Math.abs(a.c - b.c) + 1,
   });
   g.addEventListener("pointerdown", (e) => {
+    if (layout.pip) return; // the corner layout has nothing to merge
     start = at(e);
     g.setPointerCapture(e.pointerId);
     box = document.createElement("div");
@@ -348,7 +355,7 @@ $("retile").onclick = async () => { await send("retile", { layout, displayId: di
 $("untile").onclick = async () => { await send("untile"); refresh(); };
 $("swapBig").onclick = async () => { await send("swapBig", {}); refresh(); };
 
-for (const key of ["videoOnlyDefault", "noPageChanges", "singleAudio", "audioFollowsFocus", "wholeScreen", "tuckTitleBars"]) {
+for (const key of ["videoOnlyDefault", "noPageChanges", "singleAudio", "audioFollowsFocus", "clickToMain", "wholeScreen", "tuckTitleBars"]) {
   $(key).onchange = async () => {
     renderTaskbarHint();
     settings = (await send("setSettings", { patch: { [key]: $(key).checked } })) || settings;

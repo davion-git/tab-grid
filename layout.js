@@ -1,18 +1,35 @@
 // Grid maths shared by the popup and the background worker.
-// A layout is { rows, cols, merges: [{ r, c, rs, cs }] } with rows/cols 1..4.
+// A layout is { rows, cols, merges: [{ r, c, rs, cs }] } with rows/cols 1..4,
+// or a corner overlap { rows: 1, cols: 1, merges: [], pip: { corner, size } }:
+// one tile fills the area and a second, smaller one sits on top in a corner.
 export const MAX = 4;
 
 export const PRESETS = [
-  { id: "1x2", rows: 1, cols: 2 },
-  { id: "2x2", rows: 2, cols: 2 },
-  { id: "3x3", rows: 3, cols: 3 },
-  { id: "4x4", rows: 4, cols: 4 },
+  { id: "1x2", label: "1×2", rows: 1, cols: 2 },
+  { id: "2x2", label: "2×2", rows: 2, cols: 2 },
+  { id: "3x3", label: "3×3", rows: 3, cols: 3 },
+  { id: "4x4", label: "4×4", rows: 4, cols: 4 },
+  // One main game with the others in a strip along the bottom.
+  { id: "main2", label: "Main + 2", rows: 3, cols: 2, merges: [{ r: 0, c: 0, rs: 2, cs: 2 }] },
+  { id: "main3", label: "Main + 3", rows: 4, cols: 3, merges: [{ r: 0, c: 0, rs: 3, cs: 3 }] },
+  { id: "main4", label: "Main + 4", rows: 4, cols: 4, merges: [{ r: 0, c: 0, rs: 3, cs: 4 }] },
+  // Two games: one fills the screen, the other overlaps it in a top corner.
+  { id: "corner", label: "Corner (2)", rows: 1, cols: 1, pip: { corner: "tr", size: 0.3 } },
 ];
+
+export function sameLayout(a, b) {
+  return JSON.stringify(cleanLayout(a)) === JSON.stringify(cleanLayout(b));
+}
 
 const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, Number.isFinite(n) ? n : lo));
 
 // Drops merges that are out of range, 1x1 or overlap an earlier merge.
 export function cleanLayout(l = {}) {
+  if (l.pip) {
+    const corner = l.pip.corner === "tl" ? "tl" : "tr";
+    const size = Math.min(0.5, Math.max(0.15, Number(l.pip.size) || 0.3));
+    return { rows: 1, cols: 1, merges: [], pip: { corner, size } };
+  }
   const rows = clamp(l.rows | 0, 1, MAX);
   const cols = clamp(l.cols | 0, 1, MAX);
   const taken = Array.from({ length: rows }, () => Array(cols).fill(false));
@@ -32,7 +49,13 @@ export function cleanLayout(l = {}) {
 
 // Cells in reading order (by top-left corner). Tile n goes into cell n.
 export function buildCells(layout) {
-  const { rows, cols, merges } = cleanLayout(layout);
+  const { rows, cols, merges, pip } = cleanLayout(layout);
+  if (pip) {
+    return [
+      { r: 0, c: 0, rs: 1, cs: 1, main: true },
+      { r: 0, c: 0, rs: 1, cs: 1, inset: true },
+    ];
+  }
   const owner = Array.from({ length: rows }, () => Array(cols).fill(-1));
   merges.forEach((m, i) => {
     for (let y = m.r; y < m.r + m.rs; y++) for (let x = m.c; x < m.c + m.cs; x++) owner[y][x] = i;
@@ -51,7 +74,14 @@ export function buildCells(layout) {
 // Window bounds for a cell inside a display's workArea. Edges are rounded
 // from the same grid lines so neighbouring windows meet without gaps.
 export function cellRect(cell, layout, area) {
-  const { rows, cols } = cleanLayout(layout);
+  const { rows, cols, pip } = cleanLayout(layout);
+  if (cell.inset && pip) {
+    // 16:9, flush with the top edge so a tucked title bar goes off-screen.
+    const width = Math.round(area.width * pip.size);
+    const height = Math.round((width * 9) / 16);
+    const left = pip.corner === "tl" ? area.left : area.left + area.width - width;
+    return { left, top: area.top, width, height };
+  }
   const x = (k) => area.left + Math.round((k * area.width) / cols);
   const y = (k) => area.top + Math.round((k * area.height) / rows);
   return {
@@ -64,6 +94,8 @@ export function cellRect(cell, layout, area) {
 
 // Index of the largest merged cell, or -1 when nothing is merged.
 export function bigCellIndex(cells) {
+  const main = cells.findIndex((c) => c.main);
+  if (main >= 0) return main;
   let best = -1, size = 1;
   cells.forEach((c, i) => {
     if (c.rs * c.cs > size) { size = c.rs * c.cs; best = i; }
@@ -72,7 +104,8 @@ export function bigCellIndex(cells) {
 }
 
 export function describeLayout(l) {
-  const { rows, cols, merges } = cleanLayout(l);
+  const { rows, cols, merges, pip } = cleanLayout(l);
+  if (pip) return "corner overlap";
   const n = buildCells(l).length;
   return `${rows}×${cols}` + (merges.length ? `, ${n} cells` : "");
 }
