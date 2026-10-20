@@ -476,9 +476,13 @@ async function cornerSwap() {
   await cornerRestack(state);
   // Full screen can finish settling after that and cover the corner game;
   // check the stack once more when it has.
+  // Skipped if a game is active by then: that's a click waiting to be handled.
   setTimeout(() => serial(async () => {
     const s = await getState();
-    if (s.layout?.pip) await cornerRestack(s);
+    if (!s.layout?.pip) return;
+    const active = await tryGet(chrome.windows.getLastFocused());
+    if (active?.focused && s.tiles.some((t) => t.windowId === active.id)) return;
+    await cornerRestack(s);
   }), 900);
   return getState();
 }
@@ -513,7 +517,8 @@ async function reconcile() {
 // ----------------------------------------------------------------- events
 
 chrome.windows.onFocusChanged.addListener((windowId) => {
-  if (windowId === chrome.windows.WINDOW_ID_NONE || isOwnFocus(windowId) || swapping) return;
+  if (windowId === chrome.windows.WINDOW_ID_NONE || swapping) return;
+  const own = isOwnFocus(windowId);
   serial(async () => {
     const settings = await getSettings();
     const state = await getState();
@@ -521,14 +526,21 @@ chrome.windows.onFocusChanged.addListener((windowId) => {
     if (!t) return;
     const cells = buildCells(state.layout);
     if (state.layout.pip) {
+      // Decided by which window is active now, not by remembering what
+      // Tab Grid did: when it raises the corner game it makes the helper
+      // active straight after, so by now that one is active; after a real
+      // click the clicked game still is.
+      const active = await tryGet(chrome.windows.getLastFocused());
+      if (!active?.focused || active.id !== windowId) return;
       // Clicking the corner game swaps it in. Clicking the big game brought
       // it in front of the corner one, so put the corner one back on top.
       // A second swap right after one is a stray event, not a click.
-      const swapNow = cells[t.cell].inset && settings.clickToMain && state.tiles.length > 1 && Date.now() - lastCornerSwap > 700;
+      const swapNow = cells[t.cell].inset && settings.clickToMain && state.tiles.length > 1 && Date.now() - lastCornerSwap > 400;
       if (swapNow) await cornerSwap();
       else await cornerRestack(state);
       return;
     }
+    if (own) return;
     const big = bigCellIndex(cells);
     if (settings.clickToMain && big >= 0 && t.cell !== big) {
       await swapIntoBig(t.tabId); // also gives it the sound

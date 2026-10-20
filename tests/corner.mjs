@@ -84,6 +84,18 @@ for (let k = 0; k < 4; k++) {
 }
 shoot("after-swaps");
 
+// Quick swaps: click the corner game again 1 s after each swap, and right
+// after the extension has raised windows itself.
+let quickOk = 0;
+for (let k = 0; k < 6; k++) {
+  const before = await cornerIndex();
+  await clickWin(await winOf(before));
+  await ctl.waitForTimeout(1000);
+  if ((await cornerIndex()) === 1 - before) quickOk++;
+}
+await ctl.waitForTimeout(1500);
+check(quickOk === 6 && await holderFocused(), "6 quick swaps 1 s apart: each one click", `${quickOk}/6`);
+
 // A real mouse click on a video must not pause it.
 const before = await pages[1].evaluate(() => document.querySelector("video").paused);
 await pages[1].mouse.click(600, 400);
