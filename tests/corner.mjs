@@ -63,6 +63,27 @@ check(s2[1].sound && !s2[0].sound, "sound went with the new big game");
 check(await holderFocused(), "helper active after the swap");
 shoot("after-corner-click");
 
+// Fast clicks: the big game clicked 300 ms after a swap (used to be
+// ignored, leaving the corner game hidden), then several swaps in a row.
+const winOf = (i) => ctl.evaluate(async (id) => (await chrome.tabs.get(id)).windowId, ids[i]);
+const clickWin = (w) => ctl.evaluate((w) => chrome.windows.update(w, { focused: true }), w);
+const cornerIndex = async () => ((await info()).findIndex((x) => !big(x)));
+await clickWin(await winOf(await cornerIndex()));          // swap
+await ctl.waitForTimeout(300);
+await clickWin(await winOf(1 - (await cornerIndex())));    // quick click on the big game
+await ctl.waitForTimeout(2000);
+check(await holderFocused(), "quick click on the big game: corner put back on top");
+shoot("after-quick-click");
+for (let k = 0; k < 4; k++) {
+  const before = await cornerIndex();
+  await clickWin(await winOf(before));
+  await ctl.waitForTimeout(1500);
+  const after = await info();
+  check(after.findIndex((x) => !big(x)) === 1 - before && after.filter((x) => x.state === "fullscreen").length === 1 && await holderFocused(),
+    `swap ${k + 1} of 4: games swapped, one full screen, corner on top`);
+}
+shoot("after-swaps");
+
 // A real mouse click on a video must not pause it.
 const before = await pages[1].evaluate(() => document.querySelector("video").paused);
 await pages[1].mouse.click(600, 400);

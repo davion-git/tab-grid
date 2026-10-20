@@ -117,7 +117,19 @@ function windowRect(cell, frame, tuck) {
 // windows from the bottom row up; within a row, `lastTabId` (the tile just
 // clicked, if it's in that row) goes last. Raising a window gives it focus,
 // so the focus events this causes are ignored and the sound stays put.
-let ignoreFocusUntil = 0;
+// Focus changes Tab Grid causes itself (raising a window gives it focus)
+// must not count as clicks. Each window it raises is remembered for a
+// moment and its next focus event skipped; the user's clicks always count.
+const ownFocus = new Map(); // windowId -> expiry time
+async function raise(windowId) {
+  ownFocus.set(windowId, Date.now() + 1500);
+  await tryGet(chrome.windows.update(windowId, { focused: true }));
+}
+function isOwnFocus(windowId) {
+  const until = ownFocus.get(windowId);
+  ownFocus.delete(windowId);
+  return until > Date.now();
+}
 async function stackRows(state, lastTabId = null) {
   const cells = buildCells(state.layout);
   const order = [...state.tiles].sort((a, b) =>
@@ -125,9 +137,7 @@ async function stackRows(state, lastTabId = null) {
     cells[b.cell].r - cells[a.cell].r ||
     (a.tabId === lastTabId) - (b.tabId === lastTabId)
   );
-  ignoreFocusUntil = Date.now() + 2000;
-  for (const t of order) await tryGet(chrome.windows.update(t.windowId, { focused: true }));
-  ignoreFocusUntil = Date.now() + 500;
+  for (const t of order) await raise(t.windowId);
 }
 
 // Windows always brings a clicked window to the front, so a clicked tile
@@ -418,10 +428,8 @@ async function cornerRestack(state) {
   const cells = buildCells(state.layout);
   const inset = state.tiles.find((t) => cells[t.cell]?.inset);
   const holder = await ensureHolder(state);
-  ignoreFocusUntil = Date.now() + 2000;
-  if (inset) await tryGet(chrome.windows.update(inset.windowId, { focused: true }));
-  await tryGet(chrome.windows.update(holder, { focused: true }));
-  ignoreFocusUntil = Date.now() + 500;
+  if (inset) await raise(inset.windowId);
+  await raise(holder);
 }
 
 // With "Hide title bars" the big game goes full screen: no title bar, and no
@@ -440,6 +448,9 @@ async function placeCornerTile(t, state, area) {
   await placeWindow(t.windowId, windowRect(cellRect(cell, state.layout, area), state.frame, state.tuck));
 }
 
+let swapping = false;
+let lastCornerSwap = 0;
+
 // Swaps the two games; the sound goes with the big one.
 async function cornerSwap() {
   const state = await getState();
@@ -451,11 +462,24 @@ async function cornerSwap() {
   [main.cell, inset.cell] = [inset.cell, main.cell];
   if ((await getSettings()).singleAudio) state.audioTabId = inset.tabId;
   await setState(state);
-  ignoreFocusUntil = Date.now() + 3000;
-  await tryGet(placeCornerTile(main, state, area)); // old big game into the corner
-  await tryGet(placeCornerTile(inset, state, area)); // old corner game fills the screen
+  // Leaving and entering full screen can activate windows by themselves;
+  // ignore focus changes until both windows are in place.
+  swapping = true;
+  try {
+    await tryGet(placeCornerTile(main, state, area)); // old big game into the corner
+    await tryGet(placeCornerTile(inset, state, area)); // old corner game fills the screen
+  } finally {
+    swapping = false;
+  }
+  lastCornerSwap = Date.now();
   await applyAudio(state);
   await cornerRestack(state);
+  // Full screen can finish settling after that and cover the corner game;
+  // check the stack once more when it has.
+  setTimeout(() => serial(async () => {
+    const s = await getState();
+    if (s.layout?.pip) await cornerRestack(s);
+  }), 900);
   return getState();
 }
 
@@ -489,7 +513,7 @@ async function reconcile() {
 // ----------------------------------------------------------------- events
 
 chrome.windows.onFocusChanged.addListener((windowId) => {
-  if (windowId === chrome.windows.WINDOW_ID_NONE || Date.now() < ignoreFocusUntil) return;
+  if (windowId === chrome.windows.WINDOW_ID_NONE || isOwnFocus(windowId) || swapping) return;
   serial(async () => {
     const settings = await getSettings();
     const state = await getState();
@@ -499,7 +523,9 @@ chrome.windows.onFocusChanged.addListener((windowId) => {
     if (state.layout.pip) {
       // Clicking the corner game swaps it in. Clicking the big game brought
       // it in front of the corner one, so put the corner one back on top.
-      if (cells[t.cell].inset && settings.clickToMain && state.tiles.length > 1) await cornerSwap();
+      // A second swap right after one is a stray event, not a click.
+      const swapNow = cells[t.cell].inset && settings.clickToMain && state.tiles.length > 1 && Date.now() - lastCornerSwap > 700;
+      if (swapNow) await cornerSwap();
       else await cornerRestack(state);
       return;
     }
