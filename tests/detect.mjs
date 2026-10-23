@@ -39,6 +39,14 @@ fs.writeFileSync(path.join(dir, "site2.html"), page(`
   <div style="display:flex;gap:10px;padding:10px">
     <div style="contain:paint"><video src="clip.webm" autoplay muted loop style="width:640px;height:360px"></video></div>
     <iframe src="http://localhost:8767/frame.html" width="300" height="250" style="border:0"></iframe></div>`));
+// (3) A player widget: the video is inside the widget's own shadow DOM.
+fs.writeFileSync(path.join(dir, "site3.html"), page(`
+  <header style="height:70px;background:#333;color:#fff">Stream site</header>
+  <my-player style="display:block;width:640px;height:360px;margin:20px"></my-player>
+  <script>customElements.define("my-player", class extends HTMLElement { connectedCallback() {
+    const r = this.attachShadow({ mode: "open" });
+    r.innerHTML = '<div style="position:relative;width:100%;height:100%"><video src="clip.webm" autoplay muted loop style="width:100%;height:100%;background:#000"></video>' +
+      '<button id="mute" style="position:absolute;left:8px;bottom:8px">mute</button></div>'; } });</script>`));
 const server = spawn("python", ["-m", "http.server", "8767", "--directory", dir], { stdio: "ignore" });
 await new Promise((r) => setTimeout(r, 1500));
 
@@ -47,13 +55,13 @@ const ctx = await chromium.launchPersistentContext("", { channel: "chromium", he
   args: [`--disable-extensions-except=${ext}`, `--load-extension=${ext}`, "--autoplay-policy=no-user-gesture-required"] });
 try {
   // The detection and the stylesheet, as they run on an allowed site.
-  for (const [name, expectTag] of [["site1.html", "iframe"], ["site2.html", "video"]]) {
+  for (const [name, expectTag] of [["site1.html", "iframe"], ["site2.html", "video"], ["site3.html", "video"]]) {
     const p = await ctx.newPage();
     await p.setViewportSize({ width: 960, height: 540 });
     await p.goto(`http://127.0.0.1:8767/${name}`);
     await p.waitForTimeout(2500);
     const found = await p.evaluate(markLargestPlayer);
-    check(found?.tag === expectTag, `${name}: found the player (${expectTag}), not the ad`, JSON.stringify(found));
+    check(found?.player === expectTag, `${name}: found the player (${expectTag}), not the ad`, JSON.stringify(found));
     await p.addStyleTag({ path: markedCss });
     await p.waitForTimeout(500);
     const res = await p.evaluate(() => {
@@ -62,7 +70,7 @@ try {
       // What's under the click shield at the centre: hide the shield's
       // effect by asking which element paints there.
       const under = document.elementsFromPoint(innerWidth / 2, innerHeight / 3).find((e) => e !== document.documentElement);
-      return { rect: [r.x, r.y, r.width, r.height].map(Math.round), vw: innerWidth, vh: innerHeight, topIsPlayer: under === el };
+      return { rect: [r.x, r.y, r.width, r.height].map(Math.round), vw: innerWidth, vh: innerHeight, topIsPlayer: el === under || el.contains(under) };
     });
     check(res.rect[0] === 0 && res.rect[1] === 0 && res.rect[2] === res.vw && res.rect[3] === res.vh,
       `${name}: the player fills the window`, JSON.stringify(res.rect));

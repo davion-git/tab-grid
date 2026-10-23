@@ -187,15 +187,18 @@ async function applyCss(tile, settings) {
   const tab = await tryGet(chrome.tabs.get(tile.tabId));
   if (!tab) return;
   const kind = siteKind(tab.url);
-  const file = { yt: CSS.yt, generic: CSS.generic, other: CSS.marked }[kind];
+  let file = { yt: CSS.yt, generic: CSS.marked, other: CSS.marked }[kind];
   if (!file) return setCssStatus(tile.tabId, "off");
   if (!(await tryGet(chrome.permissions.contains({ origins: [sitePattern(tab.url)] })))) {
     return setCssStatus(tile.tabId, "needs-permission");
   }
-  if (kind === "other") {
-    // A site Tab Grid doesn't know: find its player first.
+  if (kind !== "yt") {
+    // Find the page's player box first (see detect.js).
     const [run] = await chrome.scripting.executeScript({ target: { tabId: tile.tabId }, func: markLargestPlayer }).catch(() => []);
-    if (!run?.result) {
+    if (!run?.result && kind === "generic") {
+      // A known site whose player wasn't found: lift any <video> instead.
+      file = CSS.generic;
+    } else if (!run?.result) {
       // Players often appear after the page has loaded: look once more.
       if (!retriedFind.has(tile.tabId)) {
         retriedFind.add(tile.tabId);

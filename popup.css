@@ -73,6 +73,8 @@ input:not([type="checkbox"]) { flex: 1; min-width: 0; }
   padding: 5px 4px; border-radius: 6px;
 }
 .list li:hover { background: var(--panel); }
+#tileList li { flex-wrap: wrap; }
+.list .status { flex-basis: 100%; padding-left: 28px; font-size: 12px; color: var(--warn-fg); }
 .list .title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .list img { width: 16px; height: 16px; flex: none; }
 .badge {

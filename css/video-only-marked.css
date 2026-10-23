@@ -1,7 +1,7 @@
-/* Tab Grid: video-only mode for sites the user allowed. detect.js marks the
-   page's player (the biggest video or embedded player frame) with
-   data-tabgrid-player; this makes that one element fill the window, over
-   everything else on the page. */
+/* Tab Grid: video-only mode for every site except youtube.com. detect.js
+   marks the page's player box (the biggest video or embedded player, with
+   the site's own controls around it) with data-tabgrid-player; this makes
+   that one element fill the window, over everything else on the page. */
 
 html, body {
   overflow: hidden !important;
@@ -39,6 +39,27 @@ body *:has([data-tabgrid-player]) {
   object-fit: contain !important;
   background: #000 !important;
   z-index: 2147483000 !important;
+}
+
+/* Inside the box, the frames holding the video (sites often keep the
+   picture and its controls in a fixed 16:9 frame) and the video itself
+   follow the box's new size, so the controls end up at the bottom edge. */
+[data-tabgrid-player] *:has(video) {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  aspect-ratio: auto !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+[data-tabgrid-player] video {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  object-fit: contain !important;
 }
 
 /* Clicks on the picture switch tiles and never reach the player; the bottom

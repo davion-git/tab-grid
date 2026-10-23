@@ -188,6 +188,15 @@ function renderTiles() {
       back.onclick = async () => { await send("sendBack", { tabId: t.tabId }); refresh(); };
 
       li.append(n, title, audio, vo, go, back);
+      // Say in words when video-only couldn't do its job on this tile.
+      if (t.videoOnly && !settings.noPageChanges && (status === "needs-permission" || status.startsWith("error"))) {
+        const why = document.createElement("div");
+        why.className = "status";
+        why.textContent = status === "needs-permission"
+          ? `Video only is waiting: click Allow\u2026 to let Tab Grid on ${host}.`
+          : `Video only: ${status.slice(7)}`;
+        li.append(why);
+      }
       return li;
     })
   );

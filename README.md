@@ -34,15 +34,18 @@ design, but see [Caveats](#caveats-read-these): there's no guarantee.
 - **Fox One** (fox.com, foxone.com), **Paramount+**, **Twitch**, **Prime
   Video** (primevideo.com, amazon.com/gp/video) and **YouTube TV**
   (tv.youtube.com): listed automatically; tiling, seamless mode and sound
-  work as for YouTube. Video-only is on by default: it lifts the video out
-  of the page to fill the window, on top of everything, so the site's own
-  player controls are covered. Checked on Twitch (a live stream) and on the
-  public pages of the others, not on live subscription content.
+  work as for YouTube. Video-only is on by default: Tab Grid finds the
+  site's player box (the picture plus the site's own controls) and makes it
+  fill the window; **hover at the bottom edge for the site's play and volume
+  controls**. Checked on a live Twitch channel (its mute button works from
+  the tile) and on the public pages of the others, not on live
+  subscription content.
 - **Any other site**, e.g. smaller stream sites: a tab shows up in the list
   by itself **while it's playing sound** (Chrome reports that; Tab Grid
   doesn't read the page). Or tick **Show all tabs**, or paste the page's
   link (below). Tiling, seamless mode and sound work everywhere.
-  **Video only finds the player itself**: the first time on a site, a small
+  **Video only finds the player itself** (also inside self-contained player
+  widgets): the first time on a site, a small
   Tab Grid window asks whether to allow it on that one site, then Chrome
   confirms. After that Tab Grid looks for the biggest video or embedded
   player on the page (skipping small ads), marks it, and makes just that one
@@ -53,6 +56,9 @@ design, but see [Caveats](#caveats-read-these): there's no guarantee.
   still finds nothing, start the stream and switch Video only off and on.
   An embedded player is stretched as a whole; real embed pages fill their
   frame, so that fills the window.
+
+The popup says under a tile, in words, when video-only couldn't do its job
+there (waiting for you to allow the site, or no player found yet).
 
 **If a tile's button says "Allow…"**, Chrome isn't letting Tab Grid into
 that site, so video-only can't apply: either it was never allowed, or
@@ -270,7 +276,10 @@ Chromium.
   must come back without reloads.
 - `main-swap.mjs` (4 videos): Main + 3, clicking a strip game to swap.
 - `detect.mjs`: player detection on stand-in stream pages (an ad video plus
-  the real player two frames deep; a page video next to an ad frame).
+  the real player two frames deep; a page video next to an ad frame; a
+  player widget with its video in its own shadow DOM).
+- `twitch.mjs`: a live Twitch channel fills its tile and Twitch's own mute
+  button works from the bottom edge.
 - `link-fill.mjs`: Fill each tile on Twitch; pasting a page link and a
   video file (made with ffmpeg) into tiles.
 - `any-site.mjs`: Twitch, Prime Video and a local stand-in stream site
