@@ -119,16 +119,34 @@ export const VIDEO_URLS = [
   "https://*.fox.com/*",
   "https://*.foxone.com/*",
   "https://*.paramountplus.com/*",
+  "https://*.twitch.tv/*",
+  "https://*.primevideo.com/*",
+  "https://www.amazon.com/gp/video/*",
 ];
 
 // Which video-only stylesheet a tab gets: "yt" (made for youtube.com),
-// "generic" (tv.youtube.com, Fox One, Paramount+: untested, just makes the <video> fill
-// the window) or "none" (any other site: tiling and sound only).
+// "generic" (known streaming sites: makes the <video> fill the window),
+// "other" (any other web page: the generic sheet too, once the user has
+// granted Tab Grid that one site), or "none" (not a web page).
 export function siteKind(url = "") {
-  let host = "";
-  try { host = new URL(url).hostname; } catch {}
+  let u;
+  try { u = new URL(url); } catch { return "none"; }
+  if (!/^https?:$/.test(u.protocol)) return "none";
+  const host = u.hostname;
   if (host === "www.youtube.com" || host === "m.youtube.com") return "yt";
   if (host === "tv.youtube.com") return "generic";
-  if (/(^|\.)(fox|foxone|paramountplus)\.com$/.test(host)) return "generic";
-  return "none";
+  if (/(^|\.)(fox|foxone|paramountplus|primevideo)\.com$/.test(host)) return "generic";
+  if (/(^|\.)twitch\.tv$/.test(host)) return "generic";
+  if (host === "www.amazon.com" && u.pathname.startsWith("/gp/video")) return "generic";
+  return "other";
+}
+
+// The match pattern Chrome's permission prompt uses for a page's site.
+export function sitePattern(url = "") {
+  try {
+    const u = new URL(url);
+    return `${u.protocol}//${u.hostname}/*`;
+  } catch {
+    return null;
+  }
 }

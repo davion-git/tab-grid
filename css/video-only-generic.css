@@ -1,9 +1,9 @@
-/* Tab Grid: video-only mode for Fox One (fox.com / foxone.com),
-   Paramount+ (paramountplus.com) and tv.youtube.com. These sites' pages are unknown to us (they need a
-   subscription), so this doesn't target their layout; it lifts the <video>
-   element itself out of the page to fill the window. The player's own
-   controls end up underneath; turn video-only off for that tile when you
-   need them. */
+/* Tab Grid: video-only mode for every site except youtube.com (Fox One,
+   Paramount+, YouTube TV, Twitch, Prime Video, and any other site the user
+   allows). It doesn't target any site's layout; it lifts the <video>
+   element itself (or an embedded player frame) out of the page to fill the
+   window. The player's own controls end up underneath; turn video-only off
+   for that tile when you need them. */
 
 html, body {
   overflow: hidden !important;
@@ -40,6 +40,33 @@ video {
   margin: 0 !important;
   transform: none !important;
   object-fit: contain !important;
+  background: #000 !important;
+  z-index: 2147483000 !important;
+}
+
+/* Pages with no <video> of their own, where the player sits in an embedded
+   frame from another site (common on smaller stream sites): stretch the
+   frame that is allowed to go full screen, which is how players are
+   embedded, and undo the same traps on the elements around it. */
+html:not(:has(video)) body *:has(iframe[allowfullscreen], iframe[allow*="fullscreen"]) {
+  transform: none !important;
+  filter: none !important;
+  perspective: none !important;
+  contain: none !important;
+  will-change: auto !important;
+  clip-path: none !important;
+  z-index: 2147483000 !important;
+}
+
+html:not(:has(video)) :is(iframe[allowfullscreen], iframe[allow*="fullscreen"]) {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  border: 0 !important;
   background: #000 !important;
   z-index: 2147483000 !important;
 }

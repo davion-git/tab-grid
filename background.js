@@ -9,7 +9,7 @@
 // visibility, send synthetic input, or poll anything. Everything below is
 // either a reaction to a browser event or to a click in the popup.
 
-import { buildCells, cellRect, bigCellIndex, cleanLayout, siteKind } from "./layout.js";
+import { buildCells, cellRect, bigCellIndex, cleanLayout, siteKind, sitePattern } from "./layout.js";
 
 const CSS = {
   yt: "css/video-only-youtube.css",
@@ -168,7 +168,13 @@ async function applyCss(tile, settings) {
   await removeCss(tile.tabId);
   if (settings.noPageChanges || !tile.videoOnly) return;
   const tab = await tryGet(chrome.tabs.get(tile.tabId));
-  const file = tab && CSS[siteKind(tab.url)];
+  if (!tab) return;
+  const kind = siteKind(tab.url);
+  let file = CSS[kind];
+  // Any other site: only once the user has granted Tab Grid that site.
+  if (kind === "other" && (await tryGet(chrome.permissions.contains({ origins: [sitePattern(tab.url)] })))) {
+    file = CSS.generic;
+  }
   if (!file) return;
   await tryGet(chrome.scripting.insertCSS({ target: { tabId: tile.tabId }, files: [file], origin: "USER" }));
 }
@@ -245,7 +251,7 @@ async function tile(tabIds, layoutIn, displayId) {
       tabId,
       windowId,
       cell: i,
-      videoOnly: old ? old.videoOnly : siteKind(tab.url) !== "none" && settings.videoOnlyDefault,
+      videoOnly: old ? old.videoOnly : ["yt", "generic"].includes(siteKind(tab.url)) && settings.videoOnlyDefault,
       homeWindowId: old ? old.homeWindowId : win.type === "normal" ? win.id : null,
     });
   }
@@ -563,6 +569,17 @@ chrome.tabs.onUpdated.addListener((tabId, info) => {
     const state = await getState();
     const t = state.tiles.find((x) => x.tabId === tabId);
     if (t) await applyCss(t, await getSettings());
+  });
+});
+
+// The popup asks Chrome for a site's permission when video-only is switched
+// on there; the popup may close while Chrome's prompt is up, so the
+// stylesheet is applied from here once the permission arrives.
+chrome.permissions.onAdded.addListener(() => {
+  serial(async () => {
+    const state = await getState();
+    const settings = await getSettings();
+    for (const t of state.tiles) await applyCss(t, settings);
   });
 });
 

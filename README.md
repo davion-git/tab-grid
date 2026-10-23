@@ -31,16 +31,21 @@ design, but see [Caveats](#caveats-read-these): there's no guarantee.
 
 - **YouTube** (youtube.com watch/live pages): everything, including a
   video-only look made for YouTube's page.
-- **Fox One** (any fox.com or foxone.com tab), **Paramount+** (any
-  paramountplus.com tab) and **YouTube TV** (tv.youtube.com): listed
-  automatically; tiling, seamless mode and sound work as for YouTube.
-  Video-only is on by default but **experimental** there: it lifts the
-  video out of the page to fill the window, on top of everything, so the
-  player's own controls are covered. It was checked on the services' public
-  pages and on a test page built like a typical player, not on live
-  subscription content.
-- **Any other site:** tick **Show all tabs** under the tab list. Tiling,
-  seamless mode and sound work; video-only isn't available.
+- **Fox One** (fox.com, foxone.com), **Paramount+**, **Twitch**, **Prime
+  Video** (primevideo.com, amazon.com/gp/video) and **YouTube TV**
+  (tv.youtube.com): listed automatically; tiling, seamless mode and sound
+  work as for YouTube. Video-only is on by default: it lifts the video out
+  of the page to fill the window, on top of everything, so the site's own
+  player controls are covered. Checked on Twitch (a live stream) and on the
+  public pages of the others, not on live subscription content.
+- **Any other site**, e.g. smaller stream sites: a tab shows up in the list
+  by itself **while it's playing sound** (Chrome reports that; Tab Grid
+  doesn't read the page). Or tick **Show all tabs**. Tiling, seamless mode
+  and sound work everywhere. **Video only** works too: the first time you
+  switch it on for a site, Chrome asks whether to allow Tab Grid on that
+  one site (nothing is asked at install). If the page's player is an
+  embedded frame from another site, as on many stream sites, that frame is
+  stretched to fill the window.
 
 ## Install (load unpacked)
 
@@ -233,6 +238,8 @@ Chromium.
   fill its cell exactly; clicking a lower tile restacks; the plain layout
   must come back without reloads.
 - `main-swap.mjs` (4 videos): Main + 3, clicking a strip game to swap.
+- `any-site.mjs`: Twitch, Prime Video and a local stand-in stream site
+  with an embedded player: listed, tiled, video-only fills the window.
 - `corner.mjs` (2 videos): Corner with the helper window, full screen,
   swapping only on a corner click, and clicks never pausing a video.
 - `send-back.mjs`, `audio.mjs`, `other-sites.mjs`: those features.

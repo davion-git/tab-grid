@@ -1,9 +1,15 @@
-import { PRESETS, MAX, VIDEO_URLS, cleanLayout, buildCells, bigCellIndex, describeLayout, siteKind, sameLayout } from "./layout.js";
+import { PRESETS, MAX, VIDEO_URLS, cleanLayout, buildCells, bigCellIndex, describeLayout, siteKind, sameLayout, sitePattern } from "./layout.js";
 
-// The video tabs, or with "Show all tabs" every ordinary web tab.
+// The known video sites, plus any other tab Chrome reports as playing sound
+// (so streams on any site show up without Tab Grid reading the page), plus
+// tabs already tiled. "Show all tabs" lists every ordinary web tab.
 async function queryTabs() {
-  if (!$("showAll").checked) return chrome.tabs.query({ url: VIDEO_URLS });
-  return chrome.tabs.query({ url: ["https://*/*", "http://*/*"] });
+  const all = await chrome.tabs.query({ url: ["https://*/*", "http://*/*"] });
+  if ($("showAll").checked) return all;
+  const known = new Set((await chrome.tabs.query({ url: VIDEO_URLS })).map((t) => t.id));
+  const { tiling } = await chrome.storage.session.get("tiling");
+  const tiled = new Set((tiling?.tiles || []).map((t) => t.tabId));
+  return all.filter((t) => known.has(t.id) || t.audible || tiled.has(t.id));
 }
 
 const $ = (id) => document.getElementById(id);
@@ -131,11 +137,24 @@ function renderTiles() {
       const kind = siteKind(tab?.url);
       vo.disabled = settings.noPageChanges || kind === "none";
       vo.title = settings.noPageChanges ? "Off: “No page changes” is on"
-        : kind === "none" ? "Not available for this site (tiling and sound only)"
-        : kind === "generic" ? "Experimental on this site: makes the video fill the window, covers its controls"
+        : kind === "none" ? "Not available for this page"
+        : kind === "other" ? "Makes the video fill the window. The first time on a site, Chrome asks to allow Tab Grid there"
+        : kind === "generic" ? "Makes the video fill the window; covers the site's own player controls"
         : "Toggle video-only for this tile";
       if (kind === "none") vo.classList.remove("on");
-      vo.onclick = async () => { state = (await send("setVideoOnly", { tabId: t.tabId, on: !t.videoOnly })) || state; renderTiles(); };
+      vo.onclick = () => {
+        const on = !t.videoOnly;
+        // Ask for this one site first, while the click still counts as a
+        // user gesture. Chrome's prompt may close this popup; the
+        // background applies the stylesheet when the permission arrives.
+        const asked = on && kind === "other"
+          ? chrome.permissions.request({ origins: [sitePattern(tab.url)] }).catch(() => false)
+          : Promise.resolve(true);
+        send("setVideoOnly", { tabId: t.tabId, on }).then((s) => { state = s || state; renderTiles(); });
+        asked.then((granted) => {
+          if (!granted) send("setVideoOnly", { tabId: t.tabId, on: false }).then((s) => { state = s || state; renderTiles(); });
+        });
+      };
 
       const go = document.createElement("button");
       go.className = "icon-btn";
