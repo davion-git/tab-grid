@@ -53,6 +53,18 @@ Chrome held the access back after an update added the site (Chrome does
 that with new sites). Click it and allow. If the button shows a ⚠, video-only
 failed on that page; hover over it for the reason.
 
+### Paste a link
+
+The popup has a **Paste a stream or video link** box. **Open as tile** opens
+the address in a new window and adds it to the grid (a full layout grows:
+1×2 → 2×2 → 3×3 → 4×4, Main + 2 → Main + 3 → Main + 4). A link
+straight to a video file (.mp4, .webm, .mov, .m3u8) plays in Tab Grid's own
+small player page. This is the one feature where Tab Grid opens a page
+itself, and only when you click Open; for accounts you worry about (e.g.
+YouTube and NFL Sunday Ticket) opening the stream yourself is the more
+conservative choice. Whether a .m3u8 live-stream link plays depends on the
+Chrome version; the player says so if it can't.
+
 ## Install (load unpacked)
 
 1. Download this repository (green **Code** button → **Download ZIP**, then
@@ -160,6 +172,11 @@ and which **monitor** to tile on.
   also turn on *Settings → Personalization → Taskbar → Taskbar behaviors →
   Automatically hide the taskbar* (the popup reminds you while it's off).
 
+**Fill each tile** removes the black bars you get when a tile isn't the
+video's shape (16:9): the picture is zoomed to cover the tile and its edges
+are cropped. That can cut off a score bar at the top or bottom, so it's off
+by default. It can't reach a player embedded from another site.
+
 Changing either option while tiled re-tiles immediately; tabs don't reload.
 With **Hide title bars** on, a window can't be taller than the screen plus
 its frame, so a full-height tile (1×2, or Corner's big game without full screen) ends about 19 px
@@ -244,6 +261,8 @@ Chromium.
   fill its cell exactly; clicking a lower tile restacks; the plain layout
   must come back without reloads.
 - `main-swap.mjs` (4 videos): Main + 3, clicking a strip game to swap.
+- `link-fill.mjs`: Fill each tile on Twitch; pasting a page link and a
+  video file (made with ffmpeg) into tiles.
 - `any-site.mjs`: Twitch, Prime Video and a local stand-in stream site
   with an embedded player: listed, tiled, video-only fills the window.
 - `corner.mjs` (2 videos): Corner with the helper window, full screen,

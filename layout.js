@@ -17,6 +17,18 @@ export const PRESETS = [
   { id: "corner", label: "Corner (2)", rows: 1, cols: 1, pip: { corner: "tr", size: 0.3 } },
 ];
 
+// The next bigger layout with room for n tiles, used when a pasted link
+// doesn't fit: a main-game layout stays one (Main + 2/3/4), anything else
+// becomes the smallest square grid that fits.
+export function growLayout(layout, n) {
+  const l = cleanLayout(layout);
+  if (buildCells(l).length >= n) return l;
+  const main = PRESETS.filter((p) => p.id.startsWith("main"));
+  if ((l.pip || l.merges.length) && n <= 5) return cleanLayout(main.find((p) => buildCells(p).length >= n));
+  const grid = PRESETS.filter((p) => /^\d+x\d+$/.test(p.id) && p.rows === p.cols).find((p) => p.rows * p.cols >= n);
+  return cleanLayout(grid || { rows: 4, cols: 4 });
+}
+
 export function sameLayout(a, b) {
   return JSON.stringify(cleanLayout(a)) === JSON.stringify(cleanLayout(b));
 }

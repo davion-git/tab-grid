@@ -9,7 +9,15 @@ async function queryTabs() {
   const known = new Set((await chrome.tabs.query({ url: VIDEO_URLS })).map((t) => t.id));
   const { tiling } = await chrome.storage.session.get("tiling");
   const tiled = new Set((tiling?.tiles || []).map((t) => t.tabId));
-  return all.filter((t) => known.has(t.id) || t.audible || tiled.has(t.id));
+  const listed = all.filter((t) => known.has(t.id) || t.audible || tiled.has(t.id));
+  // Tiles that aren't web pages (Tab Grid's own player for pasted links).
+  for (const id of tiled) {
+    if (!listed.some((t) => t.id === id)) {
+      const t = await chrome.tabs.get(id).catch(() => null);
+      if (t) listed.push(t);
+    }
+  }
+  return listed;
 }
 
 const $ = (id) => document.getElementById(id);
@@ -36,7 +44,7 @@ async function send(type, extra = {}) {
 
 async function load() {
   settings = (await chrome.storage.local.get("settings")).settings || {};
-  settings = { videoOnlyDefault: true, noPageChanges: false, singleAudio: true, audioFollowsFocus: true, clickToMain: true, wholeScreen: false, tuckTitleBars: false, savedLayouts: {}, ...settings };
+  settings = { videoOnlyDefault: true, noPageChanges: false, singleAudio: true, audioFollowsFocus: true, clickToMain: true, wholeScreen: false, tuckTitleBars: false, fillTiles: false, savedLayouts: {}, ...settings };
   state = (await chrome.storage.session.get("tiling")).tiling || { tiles: [] };
   cssStatus = (await chrome.storage.session.get("cssStatus")).cssStatus || {};
   layout = cleanLayout(state.tiles.length && state.layout ? state.layout : settings.layout || layout);
@@ -51,6 +59,7 @@ async function load() {
   $("audioFollowsFocus").disabled = !settings.singleAudio;
   $("wholeScreen").checked = settings.wholeScreen;
   $("tuckTitleBars").checked = settings.tuckTitleBars;
+  $("fillTiles").checked = settings.fillTiles;
 
   displays = await chrome.system.display.getInfo();
   $("display").replaceChildren(
@@ -381,11 +390,18 @@ $("tileAll").onclick = async () => {
   await send("tile", { tabIds: tabs.map((t) => t.id), layout, displayId: displayId() });
   refresh();
 };
+$("openLink").onclick = async () => {
+  const url = $("linkInput").value.trim();
+  if (!url) return;
+  if (await send("openLink", { url })) $("linkInput").value = "";
+  refresh();
+};
+$("linkInput").onkeydown = (e) => { if (e.key === "Enter") $("openLink").click(); };
 $("retile").onclick = async () => { await send("retile", { layout, displayId: displayId() }); refresh(); };
 $("untile").onclick = async () => { await send("untile"); refresh(); };
 $("swapBig").onclick = async () => { await send("swapBig", {}); refresh(); };
 
-for (const key of ["videoOnlyDefault", "noPageChanges", "singleAudio", "audioFollowsFocus", "clickToMain", "wholeScreen", "tuckTitleBars"]) {
+for (const key of ["videoOnlyDefault", "noPageChanges", "singleAudio", "audioFollowsFocus", "clickToMain", "wholeScreen", "tuckTitleBars", "fillTiles"]) {
   $(key).onchange = async () => {
     renderTaskbarHint();
     settings = (await send("setSettings", { patch: { [key]: $(key).checked } })) || settings;

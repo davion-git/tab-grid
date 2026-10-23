@@ -9,11 +9,12 @@
 // visibility, send synthetic input, or poll anything. Everything below is
 // either a reaction to a browser event or to a click in the popup.
 
-import { buildCells, cellRect, bigCellIndex, cleanLayout, siteKind, sitePattern } from "./layout.js";
+import { buildCells, cellRect, bigCellIndex, cleanLayout, siteKind, sitePattern, growLayout } from "./layout.js";
 
 const CSS = {
   yt: "css/video-only-youtube.css",
   generic: "css/video-only-generic.css",
+  fill: "css/fill.css", // added on top of either when "Fill each tile" is on
 };
 
 const DEFAULT_SETTINGS = {
@@ -22,6 +23,7 @@ const DEFAULT_SETTINGS = {
   singleAudio: true, // only one tile unmuted at a time (off = mute each tile yourself)
   audioFollowsFocus: true,
   clickToMain: true, // in a layout with a main cell, clicking a small tile swaps it in
+  fillTiles: false, // crop the picture to fill each tile instead of black bars
   wholeScreen: false, // tile over display.bounds instead of workArea (for an auto-hidden taskbar)
   tuckTitleBars: false, // push each window's title bar out of its cell
   layout: { rows: 2, cols: 2, merges: [] },
@@ -188,6 +190,9 @@ async function applyCss(tile, settings) {
   }
   try {
     await chrome.scripting.insertCSS({ target: { tabId: tile.tabId }, files: [file], origin: "USER" });
+    if (settings.fillTiles) {
+      await chrome.scripting.insertCSS({ target: { tabId: tile.tabId }, files: [CSS.fill], origin: "USER" });
+    }
     await setCssStatus(tile.tabId, "on");
   } catch (e) {
     await setCssStatus(tile.tabId, `error: ${e?.message || e}`);
@@ -353,6 +358,29 @@ async function sendBack(tabId) {
   await setState(state);
   await putBack([t], tabId);
   return state;
+}
+
+// "Paste a link": opens the address the user pasted in a new window and
+// adds it to the grid. A direct video file plays in Tab Grid's own player
+// page. Only ever done on the user's click in the popup.
+const MEDIA_FILE = /\.(mp4|m4v|webm|mov|ogv|m3u8)$/i;
+async function openLink(text) {
+  let u;
+  try { u = new URL(String(text).trim()); } catch { throw new Error("That doesn't look like a web address."); }
+  if (!/^https?:$/.test(u.protocol)) throw new Error("Only http:// and https:// links can be opened.");
+  const url = MEDIA_FILE.test(u.pathname) ? chrome.runtime.getURL(`player.html?src=${encodeURIComponent(u.href)}`) : u.href;
+  const state = await getState();
+  const settings = await getSettings();
+  const w = await chrome.windows.create({ url, type: "popup", focused: true, width: 960, height: 540 });
+  const tabId = w.tabs[0].id;
+  const tabIds = [...sortedTiles(state).map((t) => t.tabId), tabId];
+  // A full layout grows to the next size that fits (16 tiles at most).
+  const layout = growLayout(state.tiles.length ? state.layout : settings.layout, tabIds.length);
+  const next = await tile(tabIds, layout, state.displayId ?? undefined);
+  if (!next.tiles.some((t) => t.tabId === tabId)) {
+    throw new Error("Opened, but the grid is full (16 tiles). It's in its own window.");
+  }
+  return next;
 }
 
 async function setVideoOnly(tabId, on) {
@@ -624,6 +652,7 @@ const handlers = {
     return tile(sortedTiles(state).map((t) => t.tabId), m.layout, m.displayId);
   },
   untile: () => untile(),
+  openLink: (m) => openLink(m.url),
   sendBack: (m) => sendBack(m.tabId),
   setAudio: (m) => setAudio(m.tabId),
   toggleMute: (m) => toggleMute(m.tabId),
@@ -648,7 +677,9 @@ const handlers = {
     const before = await getSettings();
     const settings = await setSettings(m.patch);
     const state = await getState();
-    if (before.noPageChanges !== settings.noPageChanges) for (const t of state.tiles) await applyCss(t, settings);
+    if (before.noPageChanges !== settings.noPageChanges || before.fillTiles !== settings.fillTiles) {
+      for (const t of state.tiles) await applyCss(t, settings);
+    }
     if (settings.audioFollowsFocus && !before.audioFollowsFocus) await applyAudio(state);
     if (settings.singleAudio && !before.singleAudio) await applyAudio(state);
     if (!settings.singleAudio && before.singleAudio) {

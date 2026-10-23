@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Tab Grid player</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+    video { position: fixed; inset: 0; width: 100vw; height: 100vh; object-fit: contain; background: #000; }
+    video.fill { object-fit: cover; }
+    /* Clicks on the picture switch tiles; they shouldn't pause. The bottom
+       edge stays clickable for the player's controls. */
+    #shield { position: fixed; inset: 0 0 64px 0; }
+    #msg {
+      position: fixed; inset: auto 16px 80px 16px; margin: 0; padding: 10px 12px; border-radius: 6px;
+      background: rgba(30, 30, 36, .92); color: #eee; font: 13px/1.4 system-ui, "Segoe UI", sans-serif;
+    }
+  </style>
+  <script type="module" src="player.js"></script>
+</head>
+<body>
+  <!-- Plays a direct video link (an .mp4, .webm or .m3u8 address) pasted
+       into Tab Grid's popup. -->
+  <video id="v" autoplay playsinline controls></video>
+  <div id="shield"></div>
+  <p id="msg" hidden></p>
+</body>
+</html>

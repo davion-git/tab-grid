@@ -1,0 +1,13 @@
+/* Tab Grid: "Fill each tile". Added on top of a video-only stylesheet. The
+   picture is zoomed until it covers the whole tile and the overflow at the
+   edges is cropped, instead of showing black bars when the tile isn't the
+   video's shape. (An embedded player frame can't be reached from here.) */
+
+html video {
+  object-fit: cover !important;
+}
+
+/* YouTube's video-only sheet sets "contain" with a more specific selector. */
+html:has(ytd-watch-flexy:not([hidden])) ytd-watch-flexy #movie_player video.html5-main-video.html5-main-video {
+  object-fit: cover !important;
+}

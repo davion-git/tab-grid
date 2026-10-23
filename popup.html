@@ -31,6 +31,11 @@
       <button id="tileAll">Tile all</button>
       <label class="check" style="margin-left:auto"><input type="checkbox" id="showAll"> Show all tabs</label>
     </div>
+    <div class="row">
+      <input id="linkInput" placeholder="Paste a stream or video link" spellcheck="false">
+      <button id="openLink">Open as tile</button>
+    </div>
+    <p class="hint muted">Opens it in a new tile. Links straight to a video file (.mp4, .webm, .m3u8) play in Tab Grid's own player.</p>
   </section>
 
   <section>
@@ -59,6 +64,7 @@
     <label class="check"><input type="checkbox" id="audioFollowsFocus"> Sound follows the tile I click</label>
     <label class="check"><input type="checkbox" id="clickToMain"> Click a small game to make it the main one <span class="muted">(layouts with a ★ cell; in Corner, click the corner game)</span></label>
     <label class="check"><input type="checkbox" id="tuckTitleBars"> Hide title bars <span class="muted">(tucks each window's bar out of its cell; the tile you click covers a thin strip of the one above)</span></label>
+    <label class="check"><input type="checkbox" id="fillTiles"> Fill each tile <span class="muted">(no black bars: crops the picture's edges, which can cut off a score bar)</span></label>
     <label class="check"><input type="checkbox" id="wholeScreen"> Use the whole screen <span class="muted">(covers the taskbar's area)</span></label>
     <p id="taskbarHint" class="muted small" hidden></p>
     <label class="field">Monitor <select id="display"></select></label>
