@@ -40,12 +40,19 @@ design, but see [Caveats](#caveats-read-these): there's no guarantee.
   public pages of the others, not on live subscription content.
 - **Any other site**, e.g. smaller stream sites: a tab shows up in the list
   by itself **while it's playing sound** (Chrome reports that; Tab Grid
-  doesn't read the page). Or tick **Show all tabs**. Tiling, seamless mode
-  and sound work everywhere. **Video only** works too: the first time you
-  switch it on for a site, a small Tab Grid window asks whether to allow it
-  on that one site, then Chrome confirms (nothing is asked at install). If
-  the page's player is an embedded frame from another site, as on many
-  stream sites, that frame is stretched to fill the window.
+  doesn't read the page). Or tick **Show all tabs**, or paste the page's
+  link (below). Tiling, seamless mode and sound work everywhere.
+  **Video only finds the player itself**: the first time on a site, a small
+  Tab Grid window asks whether to allow it on that one site, then Chrome
+  confirms. After that Tab Grid looks for the biggest video or embedded
+  player on the page (skipping small ads), marks it, and makes just that one
+  fill the window, over headers, chat, ads and banners. This is the one
+  place Tab Grid runs a script in a page: once, only on sites you allowed,
+  only reading sizes and marking the player; it never controls it. If the
+  player hasn't appeared yet, it looks again a few seconds later; if it
+  still finds nothing, start the stream and switch Video only off and on.
+  An embedded player is stretched as a whole; real embed pages fill their
+  frame, so that fills the window.
 
 **If a tile's button says "Allow…"**, Chrome isn't letting Tab Grid into
 that site, so video-only can't apply: either it was never allowed, or
@@ -59,7 +66,8 @@ The popup has a **Paste a stream or video link** box. **Open as tile** opens
 the address in a new window and adds it to the grid (a full layout grows:
 1×2 → 2×2 → 3×3 → 4×4, Main + 2 → Main + 3 → Main + 4). A link
 straight to a video file (.mp4, .webm, .mov, .m3u8) plays in Tab Grid's own
-small player page. This is the one feature where Tab Grid opens a page
+small player page. A pasted web page gets Video only straight away, with
+the Allow window if the site is new. This is the one feature where Tab Grid opens a page
 itself, and only when you click Open; for accounts you worry about (e.g.
 YouTube and NFL Sunday Ticket) opening the stream yourself is the more
 conservative choice. Whether a .m3u8 live-stream link plays depends on the
@@ -261,6 +269,8 @@ Chromium.
   fill its cell exactly; clicking a lower tile restacks; the plain layout
   must come back without reloads.
 - `main-swap.mjs` (4 videos): Main + 3, clicking a strip game to swap.
+- `detect.mjs`: player detection on stand-in stream pages (an ad video plus
+  the real player two frames deep; a page video next to an ad frame).
 - `link-fill.mjs`: Fill each tile on Twitch; pasting a page link and a
   video file (made with ffmpeg) into tiles.
 - `any-site.mjs`: Twitch, Prime Video and a local stand-in stream site

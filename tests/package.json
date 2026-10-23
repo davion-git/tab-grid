@@ -4,7 +4,7 @@
   "type": "module",
   "description": "End-to-end tests for the Tab Grid extension (Playwright, headed).",
   "scripts": {
-    "test": "node e2e.mjs && node seamless.mjs && node main-swap.mjs && node corner.mjs && node send-back.mjs && node audio.mjs && node other-sites.mjs && node any-site.mjs && node link-fill.mjs",
+    "test": "node e2e.mjs && node seamless.mjs && node main-swap.mjs && node corner.mjs && node send-back.mjs && node audio.mjs && node other-sites.mjs && node any-site.mjs && node link-fill.mjs && node detect.mjs",
     "icons": "node make-icons.mjs"
   },
   "devDependencies": {

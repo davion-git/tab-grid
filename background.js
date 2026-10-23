@@ -10,10 +10,12 @@
 // either a reaction to a browser event or to a click in the popup.
 
 import { buildCells, cellRect, bigCellIndex, cleanLayout, siteKind, sitePattern, growLayout } from "./layout.js";
+import { markLargestPlayer } from "./detect.js";
 
 const CSS = {
   yt: "css/video-only-youtube.css",
   generic: "css/video-only-generic.css",
+  marked: "css/video-only-marked.css", // sites the user allowed: the player detect.js found
   fill: "css/fill.css", // added on top of either when "Fill each tile" is on
 };
 
@@ -177,16 +179,34 @@ async function setCssStatus(tabId, status) {
   await chrome.storage.session.set({ cssStatus });
 }
 
+const retriedFind = new Set();
+
 async function applyCss(tile, settings) {
   await removeCss(tile.tabId);
   if (settings.noPageChanges || !tile.videoOnly) return setCssStatus(tile.tabId, "off");
   const tab = await tryGet(chrome.tabs.get(tile.tabId));
   if (!tab) return;
   const kind = siteKind(tab.url);
-  const file = kind === "yt" ? CSS.yt : kind === "none" ? null : CSS.generic;
+  const file = { yt: CSS.yt, generic: CSS.generic, other: CSS.marked }[kind];
   if (!file) return setCssStatus(tile.tabId, "off");
   if (!(await tryGet(chrome.permissions.contains({ origins: [sitePattern(tab.url)] })))) {
     return setCssStatus(tile.tabId, "needs-permission");
+  }
+  if (kind === "other") {
+    // A site Tab Grid doesn't know: find its player first.
+    const [run] = await chrome.scripting.executeScript({ target: { tabId: tile.tabId }, func: markLargestPlayer }).catch(() => []);
+    if (!run?.result) {
+      // Players often appear after the page has loaded: look once more.
+      if (!retriedFind.has(tile.tabId)) {
+        retriedFind.add(tile.tabId);
+        setTimeout(() => serial(async () => {
+          const t = (await getState()).tiles.find((x) => x.tabId === tile.tabId);
+          if (t) await applyCss(t, await getSettings());
+        }), 4000);
+      }
+      return setCssStatus(tile.tabId, "error: no video player found on this page yet (start it playing, then switch Video only off and on)");
+    }
+    retriedFind.delete(tile.tabId);
   }
   try {
     await chrome.scripting.insertCSS({ target: { tabId: tile.tabId }, files: [file], origin: "USER" });
@@ -360,6 +380,17 @@ async function sendBack(tabId) {
   return state;
 }
 
+// A small window that asks Chrome for one site's permission. Asked from the
+// popup itself, Chrome's prompt can vanish when the popup closes.
+async function openAllowWindow(tabId) {
+  const area = (await pickDisplay(null)).workArea;
+  const width = 440, height = 240;
+  await chrome.windows.create({
+    url: chrome.runtime.getURL(`allow.html?tab=${tabId}`), type: "popup", focused: true, width, height,
+    left: area.left + Math.round((area.width - width) / 2), top: area.top + Math.round((area.height - height) / 2),
+  });
+}
+
 // "Paste a link": opens the address the user pasted in a new window and
 // adds it to the grid. A direct video file plays in Tab Grid's own player
 // page. Only ever done on the user's click in the popup.
@@ -380,7 +411,14 @@ async function openLink(text) {
   if (!next.tiles.some((t) => t.tabId === tabId)) {
     throw new Error("Opened, but the grid is full (16 tiles). It's in its own window.");
   }
-  return next;
+  // A pasted page: show just its player straight away, asking for the
+  // site's permission if Tab Grid doesn't have it yet.
+  if (siteKind(url) === "other") {
+    await setVideoOnly(tabId, true);
+    const { cssStatus = {} } = await chrome.storage.session.get("cssStatus");
+    if (cssStatus[tabId] === "needs-permission") await openAllowWindow(tabId);
+  }
+  return getState();
 }
 
 async function setVideoOnly(tabId, on) {
@@ -662,16 +700,7 @@ const handlers = {
     return getState();
   },
   setVideoOnly: (m) => setVideoOnly(m.tabId, m.on),
-  // A small window that asks Chrome for one site's permission. Asked from
-  // the popup itself, Chrome's prompt can vanish when the popup closes.
-  openAllow: async (m) => {
-    const area = (await pickDisplay(null)).workArea;
-    const width = 440, height = 240;
-    await chrome.windows.create({
-      url: chrome.runtime.getURL(`allow.html?tab=${m.tabId}`), type: "popup", focused: true, width, height,
-      left: area.left + Math.round((area.width - width) / 2), top: area.top + Math.round((area.height - height) / 2),
-    });
-  },
+  openAllow: (m) => openAllowWindow(m.tabId),
   swapBig: (m) => swapIntoBig(m.tabId),
   setSettings: async (m) => {
     const before = await getSettings();

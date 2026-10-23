@@ -11,3 +11,8 @@ html video {
 html:has(ytd-watch-flexy:not([hidden])) ytd-watch-flexy #movie_player video.html5-main-video.html5-main-video {
   object-fit: cover !important;
 }
+
+/* A player marked on an allowed site (css/video-only-marked.css). */
+html video[data-tabgrid-player] {
+  object-fit: cover !important;
+}
