@@ -42,10 +42,16 @@ design, but see [Caveats](#caveats-read-these): there's no guarantee.
   by itself **while it's playing sound** (Chrome reports that; Tab Grid
   doesn't read the page). Or tick **Show all tabs**. Tiling, seamless mode
   and sound work everywhere. **Video only** works too: the first time you
-  switch it on for a site, Chrome asks whether to allow Tab Grid on that
-  one site (nothing is asked at install). If the page's player is an
-  embedded frame from another site, as on many stream sites, that frame is
-  stretched to fill the window.
+  switch it on for a site, a small Tab Grid window asks whether to allow it
+  on that one site, then Chrome confirms (nothing is asked at install). If
+  the page's player is an embedded frame from another site, as on many
+  stream sites, that frame is stretched to fill the window.
+
+**If a tile's button says "Allow…"**, Chrome isn't letting Tab Grid into
+that site, so video-only can't apply: either it was never allowed, or
+Chrome held the access back after an update added the site (Chrome does
+that with new sites). Click it and allow. If the button shows a ⚠, video-only
+failed on that page; hover over it for the reason.
 
 ## Install (load unpacked)
 

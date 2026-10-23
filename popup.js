@@ -1,4 +1,4 @@
-import { PRESETS, MAX, VIDEO_URLS, cleanLayout, buildCells, bigCellIndex, describeLayout, siteKind, sameLayout, sitePattern } from "./layout.js";
+import { PRESETS, MAX, VIDEO_URLS, cleanLayout, buildCells, bigCellIndex, describeLayout, siteKind, sameLayout } from "./layout.js";
 
 // The known video sites, plus any other tab Chrome reports as playing sound
 // (so streams on any site show up without Tab Grid reading the page), plus
@@ -21,6 +21,7 @@ let tabs = [];
 let selected = []; // tab ids in the order they were picked = cell order
 let layout = { rows: 2, cols: 2, merges: [] };
 let displays = [];
+let cssStatus = {}; // tabId -> what happened when video-only was last applied
 
 async function send(type, extra = {}) {
   $("error").hidden = true;
@@ -37,6 +38,7 @@ async function load() {
   settings = (await chrome.storage.local.get("settings")).settings || {};
   settings = { videoOnlyDefault: true, noPageChanges: false, singleAudio: true, audioFollowsFocus: true, clickToMain: true, wholeScreen: false, tuckTitleBars: false, savedLayouts: {}, ...settings };
   state = (await chrome.storage.session.get("tiling")).tiling || { tiles: [] };
+  cssStatus = (await chrome.storage.session.get("cssStatus")).cssStatus || {};
   layout = cleanLayout(state.tiles.length && state.layout ? state.layout : settings.layout || layout);
   $("showAll").checked = !!settings.showAll;
   tabs = await queryTabs();
@@ -135,26 +137,34 @@ function renderTiles() {
       vo.className = "icon-btn" + (t.videoOnly && !settings.noPageChanges ? " on" : "");
       vo.textContent = "Video only";
       const kind = siteKind(tab?.url);
+      const status = cssStatus[t.tabId] || "";
+      const host = (() => { try { return new URL(tab.url).hostname; } catch { return "this site"; } })();
       vo.disabled = settings.noPageChanges || kind === "none";
       vo.title = settings.noPageChanges ? "Off: “No page changes” is on"
         : kind === "none" ? "Not available for this page"
-        : kind === "other" ? "Makes the video fill the window. The first time on a site, Chrome asks to allow Tab Grid there"
-        : kind === "generic" ? "Makes the video fill the window; covers the site's own player controls"
-        : "Toggle video-only for this tile";
+        : kind === "yt" ? "Toggle video-only for this tile"
+        : "Makes the video fill the window; covers the site's own player controls";
       if (kind === "none") vo.classList.remove("on");
-      vo.onclick = () => {
-        const on = !t.videoOnly;
-        // Ask for this one site first, while the click still counts as a
-        // user gesture. Chrome's prompt may close this popup; the
-        // background applies the stylesheet when the permission arrives.
-        const asked = on && kind === "other"
-          ? chrome.permissions.request({ origins: [sitePattern(tab.url)] }).catch(() => false)
-          : Promise.resolve(true);
-        send("setVideoOnly", { tabId: t.tabId, on }).then((s) => { state = s || state; renderTiles(); });
-        asked.then((granted) => {
-          if (!granted) send("setVideoOnly", { tabId: t.tabId, on: false }).then((s) => { state = s || state; renderTiles(); });
-        });
-      };
+      if (t.videoOnly && !settings.noPageChanges && status === "needs-permission") {
+        // Chrome isn't letting Tab Grid into this site yet.
+        vo.textContent = "Allow…";
+        vo.classList.remove("on");
+        vo.title = `Chrome isn't letting Tab Grid add video-only to ${host}. Click to allow it (this site only).`;
+        vo.onclick = () => send("openAllow", { tabId: t.tabId });
+      } else {
+        if (t.videoOnly && status.startsWith("error")) {
+          vo.textContent = "Video only ⚠";
+          vo.title = `Video only couldn't be applied: ${status.slice(7)}`;
+        }
+        vo.onclick = async () => {
+          const s = await send("setVideoOnly", { tabId: t.tabId, on: !t.videoOnly });
+          state = s || state;
+          cssStatus = (await chrome.storage.session.get("cssStatus")).cssStatus || {};
+          // Switched on where Chrome needs a yes first: ask straight away.
+          if (!t.videoOnly && cssStatus[t.tabId] === "needs-permission") send("openAllow", { tabId: t.tabId });
+          renderTiles();
+        };
+      }
 
       const go = document.createElement("button");
       go.className = "icon-btn";
@@ -358,6 +368,7 @@ const displayId = () => $("display").value || null;
 
 async function refresh() {
   state = (await chrome.storage.session.get("tiling")).tiling || { tiles: [] };
+  cssStatus = (await chrome.storage.session.get("cssStatus")).cssStatus || {};
   tabs = await queryTabs();
   renderAll();
 }
@@ -394,7 +405,7 @@ $("shortcuts").onclick = (e) => { e.preventDefault(); chrome.tabs.create({ url: 
 // Keep the list current while the popup is open (audio moved by a click
 // or a shortcut, a tile window closed).
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === "session" && changes.tiling) refresh();
+  if (area === "session" && (changes.tiling || changes.cssStatus)) refresh();
 });
 
 load();

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Allow Tab Grid on this site</title>
+  <link rel="stylesheet" href="popup.css">
+  <style>
+    body { width: auto; padding: 16px 18px; }
+    h1 { margin-bottom: 8px; }
+    p { margin: 0 0 12px; }
+    #site { font-weight: 600; }
+  </style>
+  <script type="module" src="allow.js"></script>
+</head>
+<body>
+  <!-- Opened from the popup's "Allow…" button. Chrome's permission prompt is
+       shown from this window, so it can't disappear when the popup closes. -->
+  <h1>Allow Tab Grid on <span id="site">this site</span>?</h1>
+  <p class="muted">Video only needs to add a stylesheet to this site's pages, which makes the video fill its window. Chrome will ask you to confirm. Tab Grid gets access to this one site only.</p>
+  <div class="row">
+    <button id="allow" class="primary">Allow</button>
+    <button id="cancel">Cancel</button>
+  </div>
+  <p id="result" class="error" hidden></p>
+</body>
+</html>

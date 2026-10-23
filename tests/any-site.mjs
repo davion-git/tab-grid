@@ -77,11 +77,33 @@ try {
   check(twitch.video && twitch.video[0] === 0 && twitch.video[1] === 0 && twitch.video[2] === twitch.vw && twitch.video[3] === twitch.vh,
     "Twitch: the stream fills the window", JSON.stringify(twitch));
 
-  // Unknown site without permission: nothing injected even if switched on.
+  const status = async () => (await ctl.evaluate(async () => (await chrome.storage.session.get("cssStatus")).cssStatus)) || {};
+  let cs = await status();
+  check(cs[ids[0]] === "on" && cs[ids[1]] === "on" && cs[ids[2]] === "off", "status: Twitch and Prime Video on, unknown site off",
+    JSON.stringify(ids.map((id) => cs[id])));
+
+  // Unknown site without permission: nothing injected even if switched on,
+  // the status says so, and the popup offers "Allow..." which opens the
+  // small allow window.
   await call("setVideoOnly", { tabId: ids[2], on: true });
   await ctl.waitForTimeout(600);
   check((await pages[2].evaluate(() => getComputedStyle(document.documentElement).overflow)) !== "hidden",
     "unknown site: nothing injected until the site is allowed");
+  cs = await status();
+  check(cs[ids[2]] === "needs-permission", "status: unknown site needs permission", cs[ids[2]]);
+  await ctl.setViewportSize({ width: 416, height: 300 });
+  await ctl.reload(); await ctl.waitForTimeout(800);
+  const buttons = await ctl.evaluate(() => [...document.querySelectorAll("#tileList li")].map((li) => li.querySelectorAll("button")[1]?.textContent));
+  check(buttons[2] === "Allow\u2026" && buttons[0] === "Video only", "popup shows Allow\u2026 on the unknown site's tile", JSON.stringify(buttons));
+  await ctl.screenshot({ path: path.join(os.tmpdir(), "tabgrid-allow-popup.png") });
+  const allowPage = ctx.waitForEvent("page");
+  await ctl.evaluate(() => [...document.querySelectorAll("#tileList li")][2].querySelectorAll("button")[1].click());
+  const ap = await allowPage;
+  await ap.waitForLoadState(); await ap.waitForTimeout(500);
+  const site = await ap.evaluate(() => document.getElementById("site").textContent);
+  check(ap.url().includes("allow.html") && site === "127.0.0.1", "Allow\u2026 opens the allow window for that site", `${ap.url().split("/").pop()} site=${site}`);
+  await ap.screenshot({ path: path.join(os.tmpdir(), "tabgrid-allow-window.png") });
+  await ap.close();
   // What it looks like once allowed (Chrome's permission prompt can't be
   // clicked from a test, so the same stylesheet is added directly).
   await pages[2].addStyleTag({ path: path.join(ext, "css", "video-only-generic.css") });

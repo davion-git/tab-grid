@@ -164,19 +164,34 @@ async function removeCss(tabId) {
 
 // Remove-then-insert keeps exactly one copy, however often it is called
 // (YouTube fires "complete" again on in-page navigation).
+// What happened the last time video-only was applied to each tab, so the
+// popup can show it instead of failing silently: "on", "off",
+// "needs-permission" (Chrome isn't letting Tab Grid into that site: never
+// allowed, or access held back after an update) or "error: ...".
+async function setCssStatus(tabId, status) {
+  const { cssStatus = {} } = await chrome.storage.session.get("cssStatus");
+  if (cssStatus[tabId] === status) return;
+  cssStatus[tabId] = status;
+  await chrome.storage.session.set({ cssStatus });
+}
+
 async function applyCss(tile, settings) {
   await removeCss(tile.tabId);
-  if (settings.noPageChanges || !tile.videoOnly) return;
+  if (settings.noPageChanges || !tile.videoOnly) return setCssStatus(tile.tabId, "off");
   const tab = await tryGet(chrome.tabs.get(tile.tabId));
   if (!tab) return;
   const kind = siteKind(tab.url);
-  let file = CSS[kind];
-  // Any other site: only once the user has granted Tab Grid that site.
-  if (kind === "other" && (await tryGet(chrome.permissions.contains({ origins: [sitePattern(tab.url)] })))) {
-    file = CSS.generic;
+  const file = kind === "yt" ? CSS.yt : kind === "none" ? null : CSS.generic;
+  if (!file) return setCssStatus(tile.tabId, "off");
+  if (!(await tryGet(chrome.permissions.contains({ origins: [sitePattern(tab.url)] })))) {
+    return setCssStatus(tile.tabId, "needs-permission");
   }
-  if (!file) return;
-  await tryGet(chrome.scripting.insertCSS({ target: { tabId: tile.tabId }, files: [file], origin: "USER" }));
+  try {
+    await chrome.scripting.insertCSS({ target: { tabId: tile.tabId }, files: [file], origin: "USER" });
+    await setCssStatus(tile.tabId, "on");
+  } catch (e) {
+    await setCssStatus(tile.tabId, `error: ${e?.message || e}`);
+  }
 }
 
 // ------------------------------------------------------------------ audio
@@ -618,6 +633,16 @@ const handlers = {
     return getState();
   },
   setVideoOnly: (m) => setVideoOnly(m.tabId, m.on),
+  // A small window that asks Chrome for one site's permission. Asked from
+  // the popup itself, Chrome's prompt can vanish when the popup closes.
+  openAllow: async (m) => {
+    const area = (await pickDisplay(null)).workArea;
+    const width = 440, height = 240;
+    await chrome.windows.create({
+      url: chrome.runtime.getURL(`allow.html?tab=${m.tabId}`), type: "popup", focused: true, width, height,
+      left: area.left + Math.round((area.width - width) / 2), top: area.top + Math.round((area.height - height) / 2),
+    });
+  },
   swapBig: (m) => swapIntoBig(m.tabId),
   setSettings: async (m) => {
     const before = await getSettings();
