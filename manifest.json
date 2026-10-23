@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Tab Grid for YouTube",
-  "version": "1.0.0",
+  "version": "1.5.0",
   "description": "Tiles video tabs you already opened (YouTube, Fox One, Paramount+, Twitch, Prime Video, or any site) into a grid of windows. Never opens, loads or controls a video itself.",
   "minimum_chrome_version": "116",
   "permissions": [

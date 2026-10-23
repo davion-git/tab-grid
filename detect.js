@@ -56,5 +56,9 @@ export function markLargestPlayer() {
 
   box.setAttribute(ATTR, "");
   const r = box.getBoundingClientRect();
-  return { player: best.tagName.toLowerCase(), box: box.tagName.toLowerCase(), width: Math.round(r.width), height: Math.round(r.height) };
+  return {
+    player: best.tagName.toLowerCase(), box: box.tagName.toLowerCase(), width: Math.round(r.width), height: Math.round(r.height),
+    // Where this ran, and where the player frame (if it is one) comes from.
+    page: location.origin, frameFrom: best.tagName === "IFRAME" && /^https?:/.test(best.src) ? new URL(best.src).origin : null,
+  };
 }

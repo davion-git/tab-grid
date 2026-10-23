@@ -9,11 +9,11 @@ if (!tab) {
   $("result").hidden = false;
   $("allow").disabled = true;
 } else {
-  $("site").textContent = new URL(tab.url).hostname;
+  $("site").textContent = $("site2").textContent = new URL(tab.url).hostname;
 }
 
-$("allow").onclick = async () => {
-  const granted = await chrome.permissions.request({ origins: [sitePattern(tab.url)] }).catch(() => false);
+const ask = async (origins) => {
+  const granted = await chrome.permissions.request({ origins }).catch(() => false);
   if (!granted) {
     $("result").textContent = "Not allowed. Video only stays off for this site.";
     $("result").hidden = false;
@@ -22,4 +22,6 @@ $("allow").onclick = async () => {
   await chrome.runtime.sendMessage({ type: "setVideoOnly", tabId, on: true });
   window.close();
 };
+$("allow").onclick = () => ask([sitePattern(tab.url)]);
+$("allowAll").onclick = () => ask(["https://*/*", "http://*/*"]);
 $("cancel").onclick = () => window.close();

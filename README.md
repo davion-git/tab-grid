@@ -45,9 +45,12 @@ design, but see [Caveats](#caveats-read-these): there's no guarantee.
   doesn't read the page). Or tick **Show all tabs**, or paste the page's
   link (below). Tiling, seamless mode and sound work everywhere.
   **Video only finds the player itself** (also inside self-contained player
-  widgets): the first time on a site, a small
-  Tab Grid window asks whether to allow it on that one site, then Chrome
-  confirms. After that Tab Grid looks for the biggest video or embedded
+  widgets, and in every frame of the page): the first time on a site, a
+  small Tab Grid window asks whether to allow it on **All sites** or **Only
+  this site**, then Chrome confirms. Stream sites usually show a player from
+  another site inside their page (sometimes the whole page is a frame from
+  elsewhere); only **All sites** lets Tab Grid reach that player. With
+  "Only this site", the popup says when the player is out of reach. After that Tab Grid looks for the biggest video or embedded
   player on the page (skipping small ads), marks it, and makes just that one
   fill the window, over headers, chat, ads and banners. This is the one
   place Tab Grid runs a script in a page: once, only on sites you allowed,
@@ -80,6 +83,10 @@ conservative choice. Whether a .m3u8 live-stream link plays depends on the
 Chrome version; the player says so if it can't.
 
 ## Install (load unpacked)
+
+The popup shows the version (top right), so you can see that a reload took
+effect.
+
 
 1. Download this repository (green **Code** button → **Download ZIP**, then
    unzip it) or `git clone` it.
@@ -278,6 +285,8 @@ Chromium.
 - `detect.mjs`: player detection on stand-in stream pages (an ad video plus
   the real player two frames deep; a page video next to an ad frame; a
   player widget with its video in its own shadow DOM).
+- `frames.mjs`: a site whose whole page is a frame from another address,
+  with the player one frame further in; with and without access to it.
 - `twitch.mjs`: a live Twitch channel fills its tile and Twitch's own mute
   button works from the bottom edge.
 - `link-fill.mjs`: Fill each tile on Twitch; pasting a page link and a

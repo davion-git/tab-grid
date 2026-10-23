@@ -16,9 +16,10 @@
   <!-- Opened from the popup's "Allow…" button. Chrome's permission prompt is
        shown from this window, so it can't disappear when the popup closes. -->
   <h1>Allow Tab Grid on <span id="site">this site</span>?</h1>
-  <p class="muted">Video only needs to add a stylesheet to this site's pages, which makes the video fill its window. Chrome will ask you to confirm. Tab Grid gets access to this one site only.</p>
+  <p class="muted">Video only needs to find the player on the page and make it fill the window. Stream sites often show a player from another site inside their page; to reach that one too, choose <b>All sites</b>. Tab Grid only looks at tiles you switch Video only on for. Chrome will ask you to confirm.</p>
   <div class="row">
-    <button id="allow" class="primary">Allow</button>
+    <button id="allowAll" class="primary">All sites</button>
+    <button id="allow">Only <span id="site2">this site</span></button>
     <button id="cancel">Cancel</button>
   </div>
   <p id="result" class="error" hidden></p>

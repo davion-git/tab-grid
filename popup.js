@@ -154,7 +154,7 @@ function renderTiles() {
         : kind === "yt" ? "Toggle video-only for this tile"
         : "Makes the video fill the window; covers the site's own player controls";
       if (kind === "none") vo.classList.remove("on");
-      if (t.videoOnly && !settings.noPageChanges && status === "needs-permission") {
+      if (t.videoOnly && !settings.noPageChanges && (status === "needs-permission" || status === "frame-only")) {
         // Chrome isn't letting Tab Grid into this site yet.
         vo.textContent = "Allow…";
         vo.classList.remove("on");
@@ -189,12 +189,14 @@ function renderTiles() {
 
       li.append(n, title, audio, vo, go, back);
       // Say in words when video-only couldn't do its job on this tile.
-      if (t.videoOnly && !settings.noPageChanges && (status === "needs-permission" || status.startsWith("error"))) {
+      if (t.videoOnly && !settings.noPageChanges && (status === "needs-permission" || status === "frame-only" || status.startsWith("error"))) {
         const why = document.createElement("div");
         why.className = "status";
         why.textContent = status === "needs-permission"
           ? `Video only is waiting: click Allow\u2026 to let Tab Grid on ${host}.`
-          : `Video only: ${status.slice(7)}`;
+          : status === "frame-only"
+            ? "The player is inside a frame from another site. Click Allow\u2026 and choose \u201cAll sites\u201d so Tab Grid can reach it."
+            : `Video only: ${status.slice(7)}`;
         li.append(why);
       }
       return li;
@@ -433,4 +435,5 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (area === "session" && (changes.tiling || changes.cssStatus)) refresh();
 });
 
+$("version").textContent = `v${chrome.runtime.getManifest().version}`;
 load();

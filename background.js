@@ -162,7 +162,8 @@ function scheduleRestack(tabId) {
 
 async function removeCss(tabId) {
   for (const file of Object.values(CSS)) {
-    await tryGet(chrome.scripting.removeCSS({ target: { tabId }, files: [file], origin: "USER" }));
+    await tryGet(chrome.scripting.removeCSS({ target: { tabId, allFrames: true }, files: [file], origin: "USER" })
+      .catch(() => chrome.scripting.removeCSS({ target: { tabId }, files: [file], origin: "USER" })));
   }
 }
 
@@ -192,9 +193,19 @@ async function applyCss(tile, settings) {
   if (!(await tryGet(chrome.permissions.contains({ origins: [sitePattern(tab.url)] })))) {
     return setCssStatus(tile.tabId, "needs-permission");
   }
+  // On sites Tab Grid doesn't know, look in every frame of the page: many
+  // put the whole page, or the player, in a frame from another site.
+  const allFrames = kind === "other";
+  let frameOnly = false;
   if (kind !== "yt") {
     // Find the page's player box first (see detect.js).
-    const [run] = await chrome.scripting.executeScript({ target: { tabId: tile.tabId }, func: markLargestPlayer }).catch(() => []);
+    const runs = await chrome.scripting.executeScript({ target: { tabId: tile.tabId, allFrames }, func: markLargestPlayer }).catch(() => []);
+    const hits = runs.filter((r) => r.result);
+    const run = hits.find((r) => r.frameId === 0) || hits[0];
+    // The top page's "player" is a frame, and nothing answered from that
+    // frame's site: the real player is in a frame Tab Grid can't see into.
+    const top = hits.find((r) => r.frameId === 0)?.result;
+    frameOnly = allFrames && !!top?.frameFrom && !hits.some((r) => r.frameId !== 0 && r.result.page === top.frameFrom);
     if (!run?.result && kind === "generic") {
       // A known site whose player wasn't found: lift any <video> instead.
       file = CSS.generic;
@@ -212,11 +223,11 @@ async function applyCss(tile, settings) {
     retriedFind.delete(tile.tabId);
   }
   try {
-    await chrome.scripting.insertCSS({ target: { tabId: tile.tabId }, files: [file], origin: "USER" });
-    if (settings.fillTiles) {
-      await chrome.scripting.insertCSS({ target: { tabId: tile.tabId }, files: [CSS.fill], origin: "USER" });
-    }
-    await setCssStatus(tile.tabId, "on");
+    const insert = (files) => chrome.scripting.insertCSS({ target: { tabId: tile.tabId, allFrames }, files, origin: "USER" })
+      .catch(() => chrome.scripting.insertCSS({ target: { tabId: tile.tabId }, files, origin: "USER" }));
+    await insert([file]);
+    if (settings.fillTiles) await insert([CSS.fill]);
+    await setCssStatus(tile.tabId, frameOnly ? "frame-only" : "on");
   } catch (e) {
     await setCssStatus(tile.tabId, `error: ${e?.message || e}`);
   }
